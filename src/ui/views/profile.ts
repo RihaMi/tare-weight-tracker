@@ -10,6 +10,7 @@ import { $, armOrRun, download, esc, pickTextFile, toast } from '../dom';
 import { resetCalories } from './calories';
 import { activityKey } from './overview';
 import { bindSettings, settingsCard } from './settings';
+import { applyTheme } from '../theme';
 
 let pendingRestore: { data: AppData; name: string } | null = null;
 
@@ -95,6 +96,7 @@ function showRestoreConfirm(): void {
   $('#restoreGo').addEventListener('click', () => {
     app.data = restoredData(pendingRestore!.data, app.data); pendingRestore = null; resetCalories();
     app.applyLanguage();
+    applyTheme(app.data.settings.theme);
     commit(t('backup.restored'));
   });
   $('#restoreCancel').addEventListener('click', () => { pendingRestore = null; showRestoreConfirm(); });

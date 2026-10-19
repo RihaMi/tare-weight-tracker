@@ -42,12 +42,14 @@ export interface Profile {
 
 export type Lang = 'auto' | 'en' | 'cs';
 export type BadgeMode = 'off' | 'remaining' | 'reminder';
+export type Theme = 'auto' | 'light' | 'dark';
 
 /** A PIN is never stored, only a salted PBKDF2 hash of it. */
 export interface PinHash { hash: string; salt: string; iterations: number; length: number }
 
 export interface Settings {
   lang: Lang;
+  theme: Theme;                                     // 'auto' follows the device's light/dark setting
   pin: PinHash | null;
   autoLockMinutes: number;                          // lock again after the app was hidden this long; 0 = immediately
   reminder: { enabled: boolean; time: string };     // "HH:MM", local time
@@ -55,7 +57,7 @@ export interface Settings {
 }
 
 export const defaultSettings = (): Settings => ({
-  lang: 'auto', pin: null, autoLockMinutes: 1, reminder: { enabled: false, time: '07:30' }, badge: 'off',
+  lang: 'auto', theme: 'auto', pin: null, autoLockMinutes: 1, reminder: { enabled: false, time: '07:30' }, badge: 'off',
 });
 
 export interface AppData {
@@ -138,6 +140,7 @@ function cleanSettings(v: unknown): Settings {
   const lock = num(o.autoLockMinutes);
   return {
     lang: o.lang === 'en' || o.lang === 'cs' ? o.lang : 'auto',
+    theme: o.theme === 'light' || o.theme === 'dark' ? o.theme : 'auto',
     pin: pin && typeof pin.hash === 'string' && typeof pin.salt === 'string' && num(pin.iterations) && [4, 5, 6].includes(num(pin.length) ?? 0)
       ? { hash: pin.hash, salt: pin.salt, iterations: num(pin.iterations)!, length: num(pin.length)! } : null,
     autoLockMinutes: lock != null && lock >= 0 && lock <= 60 ? lock : d.autoLockMinutes,

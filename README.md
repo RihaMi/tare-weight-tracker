@@ -25,7 +25,7 @@ It was inspired by the iOS app *Monitor Your Weight* and rebuilt with a cleaner,
 - **Multiple profiles** and **units**: kg, lb, or stones and pounds, with cm or inches.
 - **Backup and restore.** A full backup file (.json), plus CSV export and import for spreadsheets or data from other apps.
 - **Installable and offline.** A Progressive Web App you can add to your home screen. It works without internet.
-- **Light and dark mode.** It follows your system setting.
+- **Light and dark mode.** Automatic (follows your device) by default, or pick Light or Dark under Profile & goal → App settings → Appearance.
 
 ## Development
 

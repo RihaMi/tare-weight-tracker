@@ -45,7 +45,7 @@ describe('calc', () => {
   it('notices when the goal is reached', () => {
     const r = calc(profile({ goalKg: 92 }), now);
     expect(r.reached).toBe(true);
-    expect(paceState(r)?.text).toBe('Goal reached');
+    expect(paceState(r)?.code).toBe('reached');
   });
 
   it('sorts entries regardless of storage order', () => {

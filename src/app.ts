@@ -1,5 +1,6 @@
 import type { AppData, Profile, Unit } from './data/schema';
 import type { Store } from './data/storage';
+import type { SampleText } from './data/sample';
 import { toast } from './ui/dom';
 
 export const TABS = ['overview', 'history', 'body', 'calories', 'profile'] as const;
@@ -13,6 +14,10 @@ interface AppState {
   chartRange: number; // days; 0 = all
   persist: (d: AppData) => Promise<void>;
   render: () => void;
+  /** Applies the language setting to text, numbers and dates. */
+  applyLanguage: () => void;
+  /** Name and notes for the example profile, in the current language. */
+  sampleText: () => SampleText;
 }
 
 // Filled in by main.ts during start-up, before anything renders.

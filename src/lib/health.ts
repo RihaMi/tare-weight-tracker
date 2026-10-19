@@ -4,15 +4,16 @@ import { caloriePlan, type CaloriePlan } from './calories';
 
 export { CM_IN };
 
-export interface BmiCategory { max: number; name: string; tone: 'good' | 'warn' | 'bad' }
+export type BmiId = 'under' | 'normal' | 'over' | 'obese1' | 'obese2' | 'obese3';
+export interface BmiCategory { id: BmiId; max: number; name: string; tone: 'good' | 'warn' | 'bad' }
 
 export const BMI_CATS: ReadonlyArray<BmiCategory> = [
-  { max: 18.5, name: 'Underweight', tone: 'warn' },
-  { max: 25, name: 'Normal', tone: 'good' },
-  { max: 30, name: 'Overweight', tone: 'warn' },
-  { max: 35, name: 'Obese I', tone: 'bad' },
-  { max: 40, name: 'Obese II', tone: 'bad' },
-  { max: Infinity, name: 'Obese III', tone: 'bad' },
+  { id: 'under', max: 18.5, name: 'Underweight', tone: 'warn' },
+  { id: 'normal', max: 25, name: 'Normal', tone: 'good' },
+  { id: 'over', max: 30, name: 'Overweight', tone: 'warn' },
+  { id: 'obese1', max: 35, name: 'Obese I', tone: 'bad' },
+  { id: 'obese2', max: 40, name: 'Obese II', tone: 'bad' },
+  { id: 'obese3', max: Infinity, name: 'Obese III', tone: 'bad' },
 ];
 
 export const bmiCategory = (bmi: number): BmiCategory => BMI_CATS.find(c => bmi < c.max) ?? BMI_CATS[BMI_CATS.length - 1];

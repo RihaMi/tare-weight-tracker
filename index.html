@@ -22,55 +22,77 @@
           <h1>Tare</h1>
         </div>
         <div class="ctrl">
-          <button type="button" class="btn ghost" id="installBtn" hidden>Install app</button>
-          <select id="profileSel" class="profile-sel" aria-label="Profile"></select>
-          <div class="seg" role="group" aria-label="Units" id="unitSeg">
+          <button type="button" class="btn ghost" id="installBtn" hidden data-i18n="header.install">Install app</button>
+          <select id="profileSel" class="profile-sel" aria-label="Profile" data-i18n-attr="aria-label:header.profile"></select>
+          <div class="seg" role="group" aria-label="Units" id="unitSeg" data-i18n-attr="aria-label:header.units">
             <button type="button" data-unit="kg">kg</button>
             <button type="button" data-unit="lb">lb</button>
             <button type="button" data-unit="st">st</button>
           </div>
-          <button type="button" class="btn primary" id="logBtn">+ Log weight</button>
+          <button type="button" class="btn primary" id="logBtn" data-i18n="header.log">+ Log weight</button>
         </div>
       </div>
-      <nav class="tabs" aria-label="Sections">
-        <a href="#overview" data-tab="overview">Overview</a>
-        <a href="#history" data-tab="history">History</a>
-        <a href="#body" data-tab="body">Body</a>
-        <a href="#calories" data-tab="calories">Calories</a>
-        <a href="#profile" data-tab="profile">Profile<span class="long"> &amp; goal</span></a>
+      <nav class="tabs" aria-label="Sections" data-i18n-attr="aria-label:tab.sections">
+        <a href="#overview" data-tab="overview" data-i18n="tab.overview">Overview</a>
+        <a href="#history" data-tab="history" data-i18n="tab.history">History</a>
+        <a href="#body" data-tab="body" data-i18n="tab.body">Body</a>
+        <a href="#calories" data-tab="calories" data-i18n="tab.calories">Calories</a>
+        <a href="#profile" data-tab="profile"><span data-i18n="tab.profile">Profile</span><span class="long" data-i18n="tab.profileSuffix"> &amp; goal</span></a>
       </nav>
     </header>
     <div class="banner update" id="updateBar" hidden>
-      <span>A new version of Tare is ready.</span>
-      <button type="button" class="btn primary" id="updateGo">Reload</button>
+      <span data-i18n="app.newVersion">A new version of Tare is ready.</span>
+      <button type="button" class="btn primary" id="updateGo" data-i18n="app.reload">Reload</button>
     </div>
-    <main id="view"><p class="note">Loading…</p></main>
+    <main id="view"><p class="note" data-i18n="app.loading">Loading…</p></main>
   </div>
 
   <dialog id="entryDlg" aria-labelledby="entryTitle">
     <form id="entryForm" class="form" novalidate>
       <div class="card-head flush">
-        <h2 id="entryTitle">Log weight</h2>
-        <button type="button" class="btn ghost" id="entryClose">Close</button>
+        <h2 id="entryTitle" data-i18n="entry.title">Log weight</h2>
+        <button type="button" class="btn ghost" id="entryClose" data-i18n="common.close">Close</button>
       </div>
       <div class="fields">
-        <label class="f">Date<input type="date" id="eDate" required></label>
+        <label class="f"><span data-i18n="entry.date">Date</span><input type="date" id="eDate" required></label>
       </div>
       <div id="eWeightWrap"></div>
-      <label class="f">Note<textarea id="eNote" rows="2" maxlength="500" placeholder="How did today go?"></textarea></label>
+      <label class="f"><span data-i18n="entry.note">Note</span><textarea id="eNote" rows="2" maxlength="500" placeholder="How did today go?" data-i18n-attr="placeholder:entry.notePlaceholder"></textarea></label>
       <details id="eMeasDetails">
-        <summary>Body measurements (optional)</summary>
+        <summary data-i18n="entry.measures">Body measurements (optional)</summary>
         <div class="fields" id="eMeas"></div>
       </details>
-      <p class="note" id="eExists" hidden>You already logged this date. Saving replaces that entry.</p>
+      <p class="note" id="eExists" hidden data-i18n="entry.exists">You already logged this date. Saving replaces that entry.</p>
       <p class="warnbox" id="eError" role="alert" hidden></p>
       <div class="actions">
-        <button type="button" class="btn danger spacer" id="eDelete" hidden>Delete entry</button>
-        <button type="button" class="btn" id="entryCancel">Cancel</button>
-        <button type="submit" class="btn primary">Save</button>
+        <button type="button" class="btn danger spacer" id="eDelete" hidden data-i18n="entry.delete">Delete entry</button>
+        <button type="button" class="btn" id="entryCancel" data-i18n="common.cancel">Cancel</button>
+        <button type="submit" class="btn primary" data-i18n="common.save">Save</button>
       </div>
     </form>
   </dialog>
+
+  <div class="lock" id="lock" hidden role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+    <div class="lock-box">
+      <svg class="lock-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11a4 4 0 0 1 8 0" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/><path d="M12 11l2-2" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>
+      <h2 id="lockTitle" data-i18n="lock.title">Enter your PIN</h2>
+      <div class="pin-dots" id="pinDots" aria-hidden="true"></div>
+      <p class="lock-msg" id="lockMsg" role="alert"></p>
+      <div class="keypad" id="keypad">
+        <button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button>
+        <button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button>
+        <button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button>
+        <button type="button" class="kp-text" id="forgotPin" data-i18n="lock.forgot">Forgot?</button><button type="button" data-key="0">0</button><button type="button" class="kp-text" data-key="back" aria-label="Delete last digit" data-i18n-attr="aria-label:lock.deleteDigit">⌫</button>
+      </div>
+      <div class="forgot" id="forgotPanel" hidden>
+        <p data-i18n="lock.forgotText">A forgotten PIN can't be recovered. You can erase all Tare data on this device and start again, then restore a backup if you have one.</p>
+        <div class="actions">
+          <button type="button" class="btn" id="forgotCancel" data-i18n="common.back">Back</button>
+          <button type="button" class="btn danger" id="forgotErase" data-i18n="lock.erase">Erase all data</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <noscript><p style="padding:16px">Tare needs JavaScript to run.</p></noscript>

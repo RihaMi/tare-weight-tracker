@@ -126,12 +126,13 @@ export function quality(prev: Entry | undefined, e: Entry, planPerDay: number): 
   return 'bad';
 }
 
-export function paceState(r: Stats): { cls: 'good' | 'warn' | 'bad'; text: string } | null {
+export type PaceCode = 'reached' | 'on' | 'behind' | 'away';
+export function paceState(r: Stats): { cls: 'good' | 'warn' | 'bad'; code: PaceCode } | null {
   if (!r.hasGoal || r.E.length < 2) return null;
-  if (r.reached) return { cls: 'good', text: 'Goal reached' };
+  if (r.reached) return { cls: 'good', code: 'reached' };
   const toward = (r.recentPerDay ?? 0) * r.dir;
   const need = Math.abs(r.needPerDay ?? r.planPerDay);
-  if (toward >= need * 0.9) return { cls: 'good', text: 'On pace' };
-  if (toward > 0) return { cls: 'warn', text: 'Behind pace' };
-  return { cls: 'bad', text: 'Moving away from goal' };
+  if (toward >= need * 0.9) return { cls: 'good', code: 'on' };
+  if (toward > 0) return { cls: 'warn', code: 'behind' };
+  return { cls: 'bad', code: 'away' };
 }

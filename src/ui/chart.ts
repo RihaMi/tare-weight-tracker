@@ -3,6 +3,8 @@ import { calc } from '../lib/calc';
 import { DAY, addDays, fmtDate, iso, toD } from '../lib/dates';
 import { disp, fmtW } from '../lib/units';
 import { $ } from './dom';
+import { t } from '../i18n';
+import { fmtNum } from '../lib/format';
 
 /** Step size giving roughly `target` ticks across `span`. */
 export function niceStep(span: number, target = 5): number {
@@ -21,7 +23,7 @@ export function drawChart(box: HTMLElement, p: Profile, u: Unit, range: number):
   const r = calc(p);
   let E = r.E;
   if (range && E.length) { const cut = addDays(E[E.length - 1].date, -range); E = E.filter(e => e.date >= cut); }
-  if (E.length < 2) { box.innerHTML = `<p class="note chart-empty">Log at least two weigh-ins to draw the chart.</p>`; return; }
+  if (E.length < 2) { box.innerHTML = `<p class="note chart-empty">${t('chart.needTwo')}</p>`; return; }
 
   const trendAll = trendSeries(r.E);
   const trend = trendAll.filter(x => x.date >= E[0].date);
@@ -43,7 +45,7 @@ export function drawChart(box: HTMLElement, p: Profile, u: Unit, range: number):
   let g = '';
   const dec = step < 1 ? 1 : 0;
   for (let v = lo; v <= hi + 1e-9; v += step) {
-    g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 8}" y="${y(v) + 3.5}" text-anchor="end">${v.toFixed(dec)}</text>`;
+    g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 8}" y="${y(v) + 3.5}" text-anchor="end">${fmtNum(v, dec)}</text>`;
   }
   const nT = Math.max(2, Math.min(6, Math.floor((W - L - R) / 90)));
   const longSpan = (d1 - d0) / DAY > 300;
@@ -56,11 +58,11 @@ export function drawChart(box: HTMLElement, p: Profile, u: Unit, range: number):
   const area = `${tl}L${x(trend[trend.length - 1].date).toFixed(1)},${H - B}L${x(trend[0].date).toFixed(1)},${H - B}Z`;
   const dots = E.length <= 160 ? E.map(e => `<circle class="raw" cx="${x(e.date).toFixed(1)}" cy="${y(disp(e.kg, u)).toFixed(1)}" r="2.6"/>`).join('') : '';
   const goalLine = showGoal
-    ? `<line class="goal" x1="${L}" x2="${W - R}" y1="${y(goalV!)}" y2="${y(goalV!)}"/><text class="goal-t" x="${W - R}" y="${y(goalV!) - 6}" text-anchor="end">Goal ${goalV!.toFixed(1)}</text>`
+    ? `<line class="goal" x1="${L}" x2="${W - R}" y1="${y(goalV!)}" y2="${y(goalV!)}"/><text class="goal-t" x="${W - R}" y="${y(goalV!) - 6}" text-anchor="end">${t('chart.goal', { v: fmtNum(goalV!) })}</text>`
     : '';
   const le = trend[trend.length - 1];
 
-  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight chart from ${fmtDate(E[0].date)} to ${fmtDate(E[E.length - 1].date)}">
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${t('chart.aria', { from: fmtDate(E[0].date), to: fmtDate(E[E.length - 1].date) })}">
     ${g}<path class="area" d="${area}"/>${goalLine}${dots}<path class="trend" d="${tl}"/>
     <circle class="end" cx="${x(le.date)}" cy="${y(disp(le.kg, u))}" r="5.5"/>
     <line class="hov" x1="0" x2="0" y1="${T}" y2="${H - B}" visibility="hidden"/>
@@ -76,7 +78,7 @@ export function drawChart(box: HTMLElement, p: Profile, u: Unit, range: number):
     const e = E[best], cx = x(e.date);
     hov.setAttribute('x1', String(cx)); hov.setAttribute('x2', String(cx)); hov.setAttribute('visibility', 'visible');
     tip.hidden = false;
-    tip.innerHTML = `${fmtDate(e.date, { weekday: 'short', day: 'numeric', month: 'short' })}<br><b>${fmtW(e.kg, u)}</b> · trend ${fmtW(trendByDate.get(e.date)!, u)}`;
+    tip.innerHTML = `${fmtDate(e.date, { weekday: 'short', day: 'numeric', month: 'short' })}<br><b>${fmtW(e.kg, u)}</b> · ${t('chart.tipTrend', { w: fmtW(trendByDate.get(e.date)!, u) })}`;
     const sx = (cx * rect.width) / W, sy = (y(disp(e.kg, u)) * rect.height) / H;
     tip.style.left = Math.min(rect.width - 80, Math.max(80, sx)) + 'px';
     tip.style.top = Math.max(50, sy - 8) + 'px';

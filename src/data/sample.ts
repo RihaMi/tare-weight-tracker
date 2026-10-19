@@ -14,12 +14,19 @@ function mulberry(seed: number): () => number {
   };
 }
 
-export function sampleProfile(today = todayISO()): Profile {
-  const span = 126, start = addDays(today, -span), rnd = mulberry(11), entries: Entry[] = [];
-  const notes: Record<number, string> = {
+export interface SampleText { name: string; notes: Record<number, string> }
+
+const ENGLISH: SampleText = {
+  name: 'Alex (example)',
+  notes: {
     0: 'Day one. Weighed after waking up.', 9: 'Swapped soda for sparkling water', 23: 'Weekend away, lots of restaurant food',
     41: 'Back to morning runs', 64: 'Stalled this week, kept going anyway', 88: 'Birthday dinner', 110: 'Jeans fit loose now',
-  };
+  },
+};
+
+export function sampleProfile(today = todayISO(), text: SampleText = ENGLISH): Profile {
+  const span = 126, start = addDays(today, -span), rnd = mulberry(11), entries: Entry[] = [];
+  const notes = text.notes;
   const used = new Set<number>();
   const now = Date.now();
   let d = 0;
@@ -40,7 +47,7 @@ export function sampleProfile(today = todayISO()): Profile {
     d += 1 + Math.floor(rnd() * 2.6);
   }
   return {
-    id: 'sample', sample: true, name: 'Alex (example)', sex: 'm', birthYear: new Date().getFullYear() - 38, heightCm: 180,
+    id: 'sample', sample: true, name: text.name, sex: 'm', birthYear: new Date().getFullYear() - 38, heightCm: 180,
     frame: 'medium', activity: 1.375, goalKg: 80, goalDate: addDays(today, 110), entries, updatedAt: now,
   };
 }

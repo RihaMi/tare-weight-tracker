@@ -3,7 +3,8 @@ import { isISODate } from '../lib/dates';
 // The saved data format. Bump SCHEMA_VERSION whenever its shape changes and
 // teach migrate() how to upgrade the previous version, so old data and old
 // backup files keep loading.
-export const SCHEMA_VERSION = 2;
+// v1: original single-file app. v2: entry ids and timestamps. v3: app settings.
+export const SCHEMA_VERSION = 3;
 
 export type Unit = 'kg' | 'lb' | 'st';
 export type Sex = 'f' | 'm';
@@ -39,11 +40,30 @@ export interface Profile {
   updatedAt: number;
 }
 
+export type Lang = 'auto' | 'en' | 'cs';
+export type BadgeMode = 'off' | 'remaining' | 'reminder';
+
+/** A PIN is never stored, only a salted PBKDF2 hash of it. */
+export interface PinHash { hash: string; salt: string; iterations: number; length: number }
+
+export interface Settings {
+  lang: Lang;
+  pin: PinHash | null;
+  autoLockMinutes: number;                          // lock again after the app was hidden this long; 0 = immediately
+  reminder: { enabled: boolean; time: string };     // "HH:MM", local time
+  badge: BadgeMode;                                 // what the installed app's icon shows
+}
+
+export const defaultSettings = (): Settings => ({
+  lang: 'auto', pin: null, autoLockMinutes: 1, reminder: { enabled: false, time: '07:30' }, badge: 'off',
+});
+
 export interface AppData {
   version: typeof SCHEMA_VERSION;
   unit: Unit;
   activeId: string;
   profiles: Profile[];
+  settings: Settings;
 }
 
 export const newId = (prefix = ''): string =>
@@ -56,7 +76,10 @@ export function blankProfile(name = 'Me'): Profile {
   };
 }
 
-export class DataError extends Error {}
+export type DataErrorCode = 'notBackup' | 'newerVersion' | 'noProfiles' | 'csvEmpty' | 'csvColumns';
+export class DataError extends Error {
+  constructor(public code: DataErrorCode, message: string) { super(message); }
+}
 
 const num = (v: unknown): number | null => (typeof v === 'number' && isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && isFinite(+v) ? +v : null);
 const obj = (v: unknown): Record<string, unknown> | null => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
@@ -105,20 +128,42 @@ function cleanProfile(v: unknown, now: number): Profile | null {
   return p;
 }
 
+function cleanSettings(v: unknown): Settings {
+  const d = defaultSettings();
+  const o = obj(v);
+  if (!o) return d; // v1 and v2 had no settings
+  const pin = obj(o.pin);
+  const reminder = obj(o.reminder);
+  const time = typeof reminder?.time === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(reminder.time) ? reminder.time : d.reminder.time;
+  const lock = num(o.autoLockMinutes);
+  return {
+    lang: o.lang === 'en' || o.lang === 'cs' ? o.lang : 'auto',
+    pin: pin && typeof pin.hash === 'string' && typeof pin.salt === 'string' && num(pin.iterations) && [4, 5, 6].includes(num(pin.length) ?? 0)
+      ? { hash: pin.hash, salt: pin.salt, iterations: num(pin.iterations)!, length: num(pin.length)! } : null,
+    autoLockMinutes: lock != null && lock >= 0 && lock <= 60 ? lock : d.autoLockMinutes,
+    reminder: { enabled: reminder?.enabled === true, time },
+    badge: o.badge === 'remaining' || o.badge === 'reminder' ? o.badge : 'off',
+  };
+}
+
 /**
  * Turns anything that was saved or imported (any earlier version) into
  * valid current data. Throws DataError when it isn't Tare data at all.
  */
 export function migrate(raw: unknown, now = Date.now()): AppData {
   const o = obj(raw);
-  if (!o || !Array.isArray(o.profiles)) throw new DataError('This file is not a Tare backup.');
+  if (!o || !Array.isArray(o.profiles)) throw new DataError('notBackup', 'This file is not a Tare backup.');
   const version = num(o.version) ?? 1;
-  if (version > SCHEMA_VERSION) throw new DataError('This backup comes from a newer version of Tare. Update the app and try again.');
+  if (version > SCHEMA_VERSION) throw new DataError('newerVersion', 'This backup comes from a newer version of Tare. Update the app and try again.');
   // v1 (the original single-file app) had no ids on entries and no timestamps;
   // cleanProfile/cleanEntry fill those in, so v1 → v2 needs no extra step.
   const profiles = o.profiles.map(p => cleanProfile(p, now)).filter((p): p is Profile => !!p);
-  if (!profiles.length) throw new DataError('This backup has no profiles in it.');
+  if (!profiles.length) throw new DataError('noProfiles', 'This backup has no profiles in it.');
   const unit: Unit = o.unit === 'lb' || o.unit === 'st' ? o.unit : 'kg';
   const activeId = profiles.some(p => p.id === o.activeId) ? (o.activeId as string) : profiles[0].id;
-  return { version: SCHEMA_VERSION, unit, activeId, profiles };
+  return { version: SCHEMA_VERSION, unit, activeId, profiles, settings: cleanSettings(o.settings) };
 }
+
+export const freshData = (profiles: Profile[]): AppData => ({
+  version: SCHEMA_VERSION, unit: 'kg', activeId: profiles[0].id, profiles, settings: defaultSettings(),
+});

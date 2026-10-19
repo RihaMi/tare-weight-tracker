@@ -4,9 +4,14 @@ import { DataError, MEASURES, migrate, newId, type AppData, type Entry, type Mea
 // Full backups are JSON (every profile and setting). CSV is for one profile's
 // weigh-ins, to open in a spreadsheet or bring in from another app.
 
+/** The PIN stays on the device: a backup never carries it, so restoring can't lock you out. */
 export function toBackupJSON(data: AppData, now = new Date()): string {
-  return JSON.stringify({ app: 'tare', exportedAt: now.toISOString(), ...data }, null, 2);
+  return JSON.stringify({ app: 'tare', exportedAt: now.toISOString(), ...data, settings: { ...data.settings, pin: null } }, null, 2);
 }
+
+/** Restoring replaces data and settings, but keeps this device's PIN lock as it is. */
+export const restoredData = (backup: AppData, current: AppData): AppData =>
+  ({ ...backup, settings: { ...backup.settings, pin: current.settings.pin } });
 
 export function parseBackup(text: string): AppData {
   let raw: unknown;

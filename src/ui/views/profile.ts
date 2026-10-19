@@ -1,5 +1,5 @@
 import { app, commit, go, profile, unit } from '../../app';
-import { mergeEntries, parseBackup, parseCSV, toBackupJSON, toCSV } from '../../data/backup';
+import { mergeEntries, parseBackup, parseCSV, restoredData, toBackupJSON, toCSV } from '../../data/backup';
 import { DataError, blankProfile, type AppData, type Frame, type Profile } from '../../data/schema';
 import { calc, idealKg } from '../../lib/calc';
 import { ACTIVITY } from '../../lib/calories';
@@ -7,6 +7,7 @@ import { addDays, fmtDate, todayISO } from '../../lib/dates';
 import { CM_IN, deltaUnit, disp, fromDisp, isMetric } from '../../lib/units';
 import { $, armOrRun, download, esc, pickTextFile, toast } from '../dom';
 import { resetCalories } from './calories';
+import { bindSettings, settingsCard } from './settings';
 
 const STORE_TEXT: Record<string, string> = {
   indexeddb: 'Saved on this device, in this browser.',
@@ -61,7 +62,8 @@ export function profileView(): string {
         <div class="actions start"><button type="button" class="btn" id="csvDownload">Download CSV</button><button type="button" class="btn" id="csvImport">Import CSV…</button></div>
       </div>
     </div>
-  </section>`;
+  </section>
+  ${settingsCard()}`;
 }
 
 function readProfileForm(p: Profile): void {
@@ -89,7 +91,7 @@ function showRestoreConfirm(): void {
     <p class="flush"><b>${esc(pendingRestore.name)}</b> has ${d.profiles.length} ${d.profiles.length === 1 ? 'profile' : 'profiles'} and ${n} weigh-ins. Restoring replaces everything currently in Tare on this device.</p>
     <div class="actions start"><button type="button" class="btn danger armed" id="restoreGo">Replace with backup</button><button type="button" class="btn" id="restoreCancel">Cancel</button></div></div>`;
   $('#restoreGo').addEventListener('click', () => {
-    app.data = pendingRestore!.data; pendingRestore = null; resetCalories();
+    app.data = restoredData(pendingRestore!.data, app.data); pendingRestore = null; resetCalories();
     commit('Backup restored');
   });
   $('#restoreCancel').addEventListener('click', () => { pendingRestore = null; showRestoreConfirm(); });
@@ -100,6 +102,7 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
 
 export function bindProfile(): void {
   const p = profile();
+  bindSettings();
   $('#profForm').addEventListener('submit', ev => {
     ev.preventDefault();
     readProfileForm(p);

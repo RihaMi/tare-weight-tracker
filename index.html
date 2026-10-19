@@ -72,6 +72,28 @@
     </form>
   </dialog>
 
+  <div class="lock" id="lock" hidden role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+    <div class="lock-box">
+      <svg class="lock-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11a4 4 0 0 1 8 0" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/><path d="M12 11l2-2" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>
+      <h2 id="lockTitle">Enter your PIN</h2>
+      <div class="pin-dots" id="pinDots" aria-hidden="true"></div>
+      <p class="lock-msg" id="lockMsg" role="alert"></p>
+      <div class="keypad" id="keypad">
+        <button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button>
+        <button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button>
+        <button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button>
+        <button type="button" class="kp-text" id="forgotPin">Forgot?</button><button type="button" data-key="0">0</button><button type="button" class="kp-text" data-key="back" aria-label="Delete last digit">⌫</button>
+      </div>
+      <div class="forgot" id="forgotPanel" hidden>
+        <p>A forgotten PIN can't be recovered. You can erase all Tare data on this device and start again, then restore a backup if you have one.</p>
+        <div class="actions">
+          <button type="button" class="btn" id="forgotCancel">Back</button>
+          <button type="button" class="btn danger" id="forgotErase">Erase all data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <noscript><p style="padding:16px">Tare needs JavaScript to run.</p></noscript>
   <script type="module" src="/src/main.ts"></script>

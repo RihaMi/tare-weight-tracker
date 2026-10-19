@@ -326,6 +326,45 @@ main { padding-top: 20px; display: grid; gap: 16px; }
 .wbar.good { background: var(--good); } .wbar.bad { background: var(--bad); }
 @media (max-width: 460px) { .week-table .bar-col { display: none; } }
 
+/* Lock screen */
+.lock { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: grid; place-items: center; padding: max(24px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); overflow-y: auto; }
+.lock-box { width: min(320px, 100%); display: grid; justify-items: center; gap: 14px; text-align: center; }
+.lock-mark { width: 44px; height: 44px; }
+.lock-box h2 { font-size: 1.3rem; }
+.pin-dots { display: flex; gap: 14px; min-height: 16px; }
+.pin-dots span { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--muted); transition: background .12s, border-color .12s; }
+.pin-dots span.on { background: var(--ink); border-color: var(--ink); }
+.lock-msg { min-height: 1.4em; margin: 0; font-size: .9rem; color: var(--muted); }
+.lock-msg.err { color: var(--bad); }
+.keypad { display: grid; grid-template-columns: repeat(3, 72px); gap: 14px; margin-top: 6px; }
+.keypad button { width: 72px; height: 72px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); font-family: var(--f-mono); font-size: 1.6rem; cursor: pointer; }
+.keypad button:hover { border-color: var(--muted); }
+.keypad button:active { background: var(--surface-2); }
+.keypad .kp-text { font-family: var(--f-body); font-size: .85rem; font-weight: 600; color: var(--muted); border-color: transparent; background: none; }
+.keypad [data-key="back"] { font-size: 1.3rem; }
+.forgot { display: grid; gap: 12px; text-align: left; font-size: .92rem; }
+.forgot p { margin: 0; }
+.shake { animation: shake .35s; }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+
+/* Settings */
+.settings { display: grid; }
+.setting { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 20px; align-items: start; padding: 16px 0; border-top: 1px solid var(--line); }
+.setting:first-child { border-top: 0; padding-top: 0; }
+.setting-text { display: grid; gap: 4px; min-width: 0; }
+.setting h3 { font-size: .95rem; }
+.setting-ctl { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+.setting-ctl select, .setting-ctl input[type="time"] { border: 1px solid var(--line); background: var(--surface-2); border-radius: 9px; padding: 8px 10px; color: var(--ink); }
+.setting .pin-form, .setting .inline-f { grid-column: 1 / -1; }
+.inline-f { max-width: 360px; }
+.switch { display: inline-flex; gap: 8px; align-items: center; font-weight: 600; font-size: .9rem; cursor: pointer; }
+.switch input { width: 18px; height: 18px; accent-color: var(--accent); }
+@media (max-width: 640px) {
+  .setting { grid-template-columns: minmax(0, 1fr); }
+  .setting-ctl { justify-content: flex-start; }
+}
+.banner.remind { background: var(--warn-soft); border-color: var(--warn); border-style: solid; }
+
 /* Backup */
 .backup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; margin-top: 16px; }
 .bk { border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 10px; align-content: start; }

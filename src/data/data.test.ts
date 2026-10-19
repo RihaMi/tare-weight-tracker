@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { mergeEntries, parseBackup, parseCSV, toBackupJSON, toCSV } from './backup';
-import { DataError, SCHEMA_VERSION, migrate, type Profile } from './schema';
+import { mergeEntries, parseBackup, parseCSV, restoredData, toBackupJSON, toCSV } from './backup';
+import { DataError, SCHEMA_VERSION, defaultSettings, migrate, type Profile } from './schema';
 import { sampleProfile } from './sample';
 
 // Data saved by the original single-file version (no version number, entries without ids).
@@ -45,6 +45,19 @@ describe('migrate', () => {
     expect(migrate({ ...v1, activeId: 'gone' }).activeId).toBe('pA');
   });
 
+  it('gives older data default settings', () => {
+    const d = migrate(v1);
+    expect(d.settings).toEqual(defaultSettings());
+  });
+
+  it('keeps valid settings and drops invalid ones', () => {
+    const pin = { hash: 'h', salt: 's', iterations: 150000, length: 4 };
+    const d = migrate({ ...v1, version: 3, settings: { lang: 'cs', pin, autoLockMinutes: 5, reminder: { enabled: true, time: '06:45' }, badge: 'remaining' } });
+    expect(d.settings).toEqual({ lang: 'cs', pin, autoLockMinutes: 5, reminder: { enabled: true, time: '06:45' }, badge: 'remaining' });
+    const bad = migrate({ ...v1, version: 3, settings: { lang: 'de', pin: { hash: 1 }, autoLockMinutes: -3, reminder: { enabled: 'yes', time: '25:00' }, badge: 'x' } });
+    expect(bad.settings).toEqual(defaultSettings());
+  });
+
   it('accepts the built-in example profile', () => {
     const d = migrate({ version: 2, unit: 'kg', activeId: 'sample', profiles: [sampleProfile('2026-10-19')] });
     expect(d.profiles[0].sample).toBe(true);
@@ -56,6 +69,17 @@ describe('backup files', () => {
   it('round-trips a full backup', () => {
     const d = migrate(v1);
     expect(parseBackup(toBackupJSON(d))).toEqual(d);
+  });
+
+  it('never puts the PIN in a backup, and keeps the device PIN on restore', () => {
+    const pin = { hash: 'h', salt: 's', iterations: 1, length: 6 };
+    const d = migrate(v1);
+    d.settings.pin = pin;
+    const restored = parseBackup(toBackupJSON(d));
+    expect(restored.settings.pin).toBeNull();
+    expect(restoredData(restored, d).settings.pin).toEqual(pin);
+    const unlocked = migrate(v1);
+    expect(restoredData({ ...restored, settings: { ...restored.settings, pin } }, unlocked).settings.pin).toBeNull();
   });
 
   it('explains a file that is not JSON', () => {

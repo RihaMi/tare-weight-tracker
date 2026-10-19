@@ -2,7 +2,7 @@ import './styles.css';
 import { registerSW } from 'virtual:pwa-register';
 import { app, commit, go, isTab, profile, type Tab } from './app';
 import { sampleProfile } from './data/sample';
-import { SCHEMA_VERSION, blankProfile, type Unit } from './data/schema';
+import { blankProfile, freshData, type Unit } from './data/schema';
 import { createSaver, loadData, openStore } from './data/storage';
 import { drawChart } from './ui/chart';
 import { $, esc, toast } from './ui/dom';
@@ -12,6 +12,11 @@ import { bindCalories, caloriesView, resetCalories } from './ui/views/calories';
 import { historyView, toggleWeeks } from './ui/views/history';
 import { overviewView } from './ui/views/overview';
 import { bindProfile, profileView } from './ui/views/profile';
+import { resetSettingsForm } from './ui/views/settings';
+import { updateBadge } from './ui/badge';
+import { initLock, isLocked, showLock } from './ui/lock';
+import { isPastTime } from './lib/ics';
+import { todayISO } from './lib/dates';
 
 const VIEWS: Record<Tab, () => string> = { overview: overviewView, history: historyView, body: bodyView, calories: caloriesView, profile: profileView };
 
@@ -36,13 +41,48 @@ function drawOverviewChart(): void {
   if (box) drawChart(box, profile(), app.data.unit, app.chartRange);
 }
 
+function reminderBanner(): string {
+  const rem = app.data.settings.reminder, p = profile();
+  if (!rem.enabled || !isPastTime(rem.time) || p.entries.some(e => e.date === todayISO())) return '';
+  return `<div class="banner remind"><span><b>Time to weigh in.</b> You haven't logged a weight today${app.data.profiles.length > 1 ? ` for ${esc(p.name)}` : ''}.</span>
+    <button class="btn primary" data-act="log">Log weight</button></div>`;
+}
+
 function render(): void {
+  if (isLocked()) return; // never put data on the page behind the lock screen
   renderHeader();
   const view = $('#view');
-  view.innerHTML = (app.tab === 'profile' ? '' : sampleBanner()) + VIEWS[app.tab]();
+  view.innerHTML = (app.tab === 'profile' ? '' : reminderBanner() + sampleBanner()) + VIEWS[app.tab]();
   if (app.tab === 'overview') drawOverviewChart();
   if (app.tab === 'calories') bindCalories();
-  if (app.tab === 'profile') bindProfile();
+  if (app.tab === 'profile') bindProfile(); else resetSettingsForm();
+  updateBadge();
+}
+
+let hiddenAt = 0;
+function lockNow(): void {
+  $<HTMLDialogElement>('#entryDlg').close();
+  $('#view').innerHTML = '';
+  $('#profileSel').innerHTML = '';
+  showLock(render);
+}
+
+/** Locks again after Tare has been in the background for the chosen time. */
+function setupAutoLock(): void {
+  document.addEventListener('visibilitychange', () => {
+    const s = app.data.settings;
+    if (!s.pin || isLocked()) return;
+    if (document.hidden) {
+      hiddenAt = Date.now();
+      if (s.autoLockMinutes === 0) lockNow(); // before the app switcher takes its snapshot
+    } else if (hiddenAt && Date.now() - hiddenAt >= s.autoLockMinutes * 60_000) {
+      lockNow();
+    }
+  });
+  document.addEventListener('visibilitychange', () => {
+    // Coming back after a while: refresh the reminder banner and badge.
+    if (!document.hidden && !isLocked() && !$<HTMLDialogElement>('#entryDlg').open) render();
+  });
 }
 
 function newProfile(): void {
@@ -133,7 +173,7 @@ async function start(): Promise<void> {
   const store = await openStore();
   const { data, imported } = await loadData(store);
   app.store = store;
-  app.data = data ?? { version: SCHEMA_VERSION, unit: 'kg', activeId: 'sample', profiles: [sampleProfile()] };
+  app.data = data ?? freshData([sampleProfile()]);
   app.persist = createSaver(store, () => toast("Couldn't save your last change. Download a backup under Profile & goal."));
   const t = location.hash.slice(1);
   app.tab = isTab(t) ? t : 'overview';
@@ -142,10 +182,15 @@ async function start(): Promise<void> {
   if (!data) void app.persist(app.data);
   void navigator.storage?.persist?.();
   initEntryDialog();
+  initLock();
   bindGlobalEvents();
   setupInstall();
-  render();
-  if (imported) toast('Your entries from the earlier version of Tare were moved over');
+  setupAutoLock();
+  const afterUnlock = () => {
+    render();
+    if (imported) toast('Your entries from the earlier version of Tare were moved over');
+  };
+  if (app.data.settings.pin) showLock(afterUnlock); else afterUnlock();
   if (import.meta.env.PROD) setupUpdates();
 }
 

@@ -5,6 +5,7 @@ import { ACTIVITY, roundKcal } from '../../lib/calories';
 import { fmtDate } from '../../lib/dates';
 import { deltaUnit, fmtDelta, fmtW, splitStone, disp } from '../../lib/units';
 import { esc } from '../dom';
+import { thisWeekCard } from './insights';
 
 const RANGES: ReadonlyArray<readonly [number, string]> = [[30, '1M'], [90, '3M'], [180, '6M'], [365, '1Y'], [0, 'All']];
 
@@ -106,5 +107,5 @@ export function overviewView(): string {
       <p class="muted measure">Step on the scale, ideally at the same time each morning, and log the number. Your trend, BMI and goal pace appear here after the first entry.</p>
       <button class="btn primary" data-act="log">Log first weight</button></section>`;
   }
-  return `<div class="grid-2"><div class="col">${hero(p, r)}${chartCard(r)}</div><div class="col">${statsCard(p, r)}${bmiCard(p, r)}${calorieCard(p, r)}</div></div>`;
+  return `<div class="grid-2"><div class="col">${hero(p, r)}${chartCard(r)}</div><div class="col">${thisWeekCard(p, r)}${statsCard(p, r)}${bmiCard(p, r)}${calorieCard(p, r)}</div></div>`;
 }

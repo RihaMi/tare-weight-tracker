@@ -4,6 +4,10 @@ import { calc, quality, type Quality } from '../../lib/calc';
 import { fmtDate } from '../../lib/dates';
 import { fmtDelta, fmtW } from '../../lib/units';
 import { esc } from '../dom';
+import { milestonesCard, weeklyCard } from './insights';
+
+let showAllWeeks = false;
+export const toggleWeeks = (): void => { showAllWeeks = !showAllWeeks; };
 
 const QUALITY_TEXT: Record<Quality, string> = { good: 'On pace or better', warn: 'Slower than planned', bad: 'Moved away from goal', '': 'First entry' };
 
@@ -19,7 +23,8 @@ export function historyView(): string {
     months[months.length - 1].items.push(x);
   }
 
-  return `<section class="card">
+  const insights = weeklyCard(r, showAllWeeks) + milestonesCard(profile(), r);
+  return `${insights ? `<div class="grid-2 even">${insights}</div>` : ''}<section class="card">
     <div class="card-head"><h2>All weigh-ins</h2>
       <div class="key"><span><i class="dot good"></i>${QUALITY_TEXT.good}</span><span><i class="dot warn"></i>${QUALITY_TEXT.warn}</span><span><i class="dot bad"></i>${QUALITY_TEXT.bad}</span></div></div>
     ${months.map(m => {

@@ -9,7 +9,7 @@ import { $, esc, toast } from './ui/dom';
 import { initEntryDialog, openEntry } from './ui/entryDialog';
 import { bodyView } from './ui/views/body';
 import { bindCalories, caloriesView, resetCalories } from './ui/views/calories';
-import { historyView } from './ui/views/history';
+import { historyView, toggleWeeks } from './ui/views/history';
 import { overviewView } from './ui/views/overview';
 import { bindProfile, profileView } from './ui/views/profile';
 
@@ -87,6 +87,7 @@ function bindGlobalEvents(): void {
       case 'log': openEntry(); break;
       case 'logMeas': openEntry(null, true); break;
       case 'newProfile': newProfile(); break;
+      case 'toggleWeeks': toggleWeeks(); render(); break;
       case 'clearSample':
         app.data.profiles = app.data.profiles.filter(p => !p.sample);
         if (!app.data.profiles.length) app.data.profiles.push(blankProfile());

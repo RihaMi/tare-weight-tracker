@@ -1,6 +1,8 @@
 import { commit, profile, unit } from '../app';
 import { MEASURES, newId, type Entry, type Measures } from '../data/schema';
-import { sortedEntries } from '../lib/calc';
+import { calc, sortedEntries } from '../lib/calc';
+import { newMilestones } from '../lib/insights';
+import { milestoneLabel, milestonesFor } from './views/insights';
 import { todayISO } from '../lib/dates';
 import { CM_IN, disp, fmtW, fromDisp, isMetric, splitStone } from '../lib/units';
 import { $, armOrRun } from './dom';
@@ -72,6 +74,7 @@ function submit(ev: SubmitEvent): void {
     if (isFinite(v) && v > 0) measures[k] = +(isMetric(u) ? v : v * CM_IN).toFixed(1);
   }
   const p = profile();
+  const before = milestonesFor(p, calc(p)).achieved;
   const old = p.entries.find(e => e.date === (editing ?? date));
   p.entries = p.entries.filter(e => e.date !== date && e.date !== editing);
   const e: Entry = { id: old?.id ?? newId('e_'), date, kg: Math.round(kg * 100) / 100, updatedAt: Date.now() };
@@ -82,8 +85,12 @@ function submit(ev: SubmitEvent): void {
   p.entries.sort((a, b) => (a.date < b.date ? -1 : 1));
   p.updatedAt = Date.now();
   const wasEditing = editing;
+  const r = calc(p);
+  const reached = newMilestones(before, milestonesFor(p, r).achieved);
   dlg().close();
-  commit(wasEditing ? 'Weigh-in updated' : `Logged ${fmtW(e.kg, u)}`);
+  commit(reached.length
+    ? `Milestone: ${milestoneLabel(reached[reached.length - 1], r.dir, u)}!`
+    : wasEditing ? 'Weigh-in updated' : `Logged ${fmtW(e.kg, u)}`);
 }
 
 export function initEntryDialog(): void {

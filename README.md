@@ -55,6 +55,10 @@ public/        icons (regenerate with `npm run icons`)
 .github/       CI: type-check, tests and build on every push
 ```
 
+### Checking the layout
+
+`scripts/visual-audit.js` checks every screen for sideways scrolling, elements sticking out of the screen, cut-off text and text contrast below WCAG AA. Run `npm run build` and `npm run preview`, paste the script into the browser console, then run `await tareAudit()`. Repeat at phone, tablet and desktop widths, in light and dark mode, and in each language. An empty list for every screen means it passed.
+
 ### Adding a language
 
 1. Copy `src/i18n/cs.ts` to a new file (for example `de.ts`) and translate every value. Keep the `{placeholders}` and give plural entries the forms the language needs (`one`, `few`, `many`, `other`).

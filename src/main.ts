@@ -15,6 +15,7 @@ import { bindProfile, profileView } from './ui/views/profile';
 import { resetSettingsForm } from './ui/views/settings';
 import { updateBadge } from './ui/badge';
 import { initLock, isLocked, showLock } from './ui/lock';
+import { applyTheme } from './ui/theme';
 import { isPastTime } from './lib/ics';
 import { todayISO } from './lib/dates';
 import { resolveLang, setLang, t, translateStatic, type Key } from './i18n';
@@ -204,6 +205,7 @@ async function start(): Promise<void> {
   setLang(resolveLang(data?.settings.lang ?? 'auto'));
   app.data = data ?? freshData([sampleProfile(undefined, sampleText())]);
   applyLanguage();
+  applyTheme(app.data.settings.theme);
   app.persist = createSaver(store, () => toast(t('app.saveFailed')));
   const h = location.hash.slice(1);
   app.tab = isTab(h) ? h : 'overview';

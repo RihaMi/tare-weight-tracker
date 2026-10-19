@@ -1,5 +1,6 @@
 import { app, commit } from '../../app';
-import type { BadgeMode, Lang } from '../../data/schema';
+import type { BadgeMode, Lang, Theme } from '../../data/schema';
+import { applyTheme } from '../theme';
 import { detectLang, t, type Key } from '../../i18n';
 import { addDays, todayISO } from '../../lib/dates';
 import { dailyReminderICS, isPastTime } from '../../lib/ics';
@@ -36,6 +37,7 @@ export function settingsCard(): string {
   const s = app.data.settings;
   const on = !!s.pin;
   const langOpts: Array<[Lang, string]> = [['auto', t('settings.langAuto', { lang: LANG_NAMES[detectLang()] })], ['en', LANG_NAMES.en], ['cs', LANG_NAMES.cs]];
+  const themeOpts: Array<[Theme, Key]> = [['auto', 'settings.themeAuto'], ['light', 'settings.themeLight'], ['dark', 'settings.themeDark']];
   const badgeOpts: Array<[BadgeMode, Key]> = [['off', 'settings.badgeOff'], ['remaining', 'settings.badgeRemaining'], ['reminder', 'settings.badgeReminder']];
   return `<section class="card" id="settingsCard">
     <div class="card-head"><h2>${t('settings.title')}</h2><span class="muted small">${t('settings.sub')}</span></div>
@@ -44,6 +46,12 @@ export function settingsCard(): string {
         <div class="setting-text"><h3>${t('settings.language')}</h3><p class="note flush">${t('settings.languageText')}</p></div>
         <div class="setting-ctl">
           <select id="langSel" aria-label="${esc(t('settings.language'))}">${langOpts.map(([v, l]) => `<option value="${v}" ${s.lang === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div class="setting">
+        <div class="setting-text"><h3>${t('settings.theme')}</h3><p class="note flush">${t('settings.themeText')}</p></div>
+        <div class="setting-ctl">
+          <div class="seg" role="group" aria-label="${esc(t('settings.theme'))}" id="themeSeg">${themeOpts.map(([v, l]) => `<button type="button" data-theme-opt="${v}" aria-pressed="${s.theme === v}">${t(l)}</button>`).join('')}</div>
         </div>
       </div>
       <div class="setting">
@@ -108,6 +116,13 @@ export function bindSettings(): void {
     app.data.settings.lang = (ev.target as HTMLSelectElement).value as Lang;
     app.applyLanguage();
     commit(t('settings.langChanged'));
+  });
+  $('#themeSeg').addEventListener('click', ev => {
+    const b = (ev.target as Element).closest<HTMLButtonElement>('[data-theme-opt]');
+    if (!b) return;
+    app.data.settings.theme = b.dataset.themeOpt as Theme;
+    applyTheme(app.data.settings.theme);
+    commit(t('settings.themeSaved'));
   });
   card.querySelectorAll<HTMLButtonElement>('[data-pin]').forEach(b => b.addEventListener('click', () => {
     pinMode = b.dataset.pin as PinMode;

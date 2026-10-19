@@ -1,6 +1,6 @@
 import type { Entry, Unit } from '../data/schema';
 import { addDays, daysBetween, toD } from './dates';
-import { BMI_CATS, bmiCategory } from './health';
+import { BMI_CATS, bmiCategory, type BmiId } from './health';
 import { LB } from './units';
 
 // Motivation: weekly averages, logging streaks and milestones. All pure
@@ -62,7 +62,7 @@ export type Milestone =
   | { key: string; kind: 'weight'; steps: number; amountKg: number; date: string }
   | { key: string; kind: 'progress'; pct: 25 | 50 | 75; date: string }
   | { key: string; kind: 'goal'; date: string }
-  | { key: string; kind: 'bmi'; category: string; date: string };
+  | { key: string; kind: 'bmi'; category: BmiId; date: string };
 
 export interface NextMilestone {
   kind: 'weight' | 'progress' | 'goal';
@@ -114,7 +114,7 @@ export function milestones({ entries, goalKg, heightCm, unit }: MilestoneInput):
     if (h2) {
       const idx = BMI_CATS.indexOf(bmiCategory(e.kg / h2));
       const better = dir < 0 ? idx < bestBmiIdx && idx >= normalIdx : idx > bestBmiIdx && idx <= normalIdx;
-      if (better) { bestBmiIdx = idx; achieved.push({ key: `bmi-${BMI_CATS[idx].name}`, kind: 'bmi', category: BMI_CATS[idx].name, date: e.date }); }
+      if (better) { bestBmiIdx = idx; achieved.push({ key: `bmi-${BMI_CATS[idx].id}`, kind: 'bmi', category: BMI_CATS[idx].id, date: e.date }); }
     }
   }
 

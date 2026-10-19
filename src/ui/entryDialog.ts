@@ -6,6 +6,8 @@ import { milestoneLabel, milestonesFor } from './views/insights';
 import { todayISO } from '../lib/dates';
 import { CM_IN, disp, fmtW, fromDisp, isMetric, splitStone } from '../lib/units';
 import { $, armOrRun } from './dom';
+import { t } from '../i18n';
+import { measureLabel } from './views/body';
 
 // The "Log weight" dialog, also used to edit or delete a weigh-in.
 
@@ -17,10 +19,10 @@ function weightInputs(kg: number | null): void {
   if (u === 'st') {
     const s = kg != null ? splitStone(kg) : null;
     w.innerHTML = `<div class="fields big-in">
-      <label class="f">Stones<input id="eSt" type="number" inputmode="numeric" min="2" max="60" value="${s?.st ?? ''}" required></label>
-      <label class="f">Pounds<input id="eLb" type="number" inputmode="decimal" min="0" max="13.9" step="0.1" value="${s ? s.lb.toFixed(1) : ''}"></label></div>`;
+      <label class="f">${t('entry.stones')}<input id="eSt" type="number" inputmode="numeric" min="2" max="60" value="${s?.st ?? ''}" required></label>
+      <label class="f">${t('entry.pounds')}<input id="eLb" type="number" inputmode="decimal" min="0" max="13.9" step="0.1" value="${s ? s.lb.toFixed(1) : ''}"></label></div>`;
   } else {
-    w.innerHTML = `<div class="big-in"><label class="f">Weight (${u})<input id="eW" type="number" inputmode="decimal" step="0.1" min="20" max="${u === 'kg' ? 400 : 900}" value="${kg != null ? disp(kg, u).toFixed(1) : ''}" required></label></div>`;
+    w.innerHTML = `<div class="big-in"><label class="f">${t('common.weightUnit', { unit: u })}<input id="eW" type="number" inputmode="decimal" step="0.1" min="20" max="${u === 'kg' ? 400 : 900}" value="${kg != null ? disp(kg, u).toFixed(1) : ''}" required></label></div>`;
   }
 }
 
@@ -33,19 +35,20 @@ export function openEntry(date?: string | null, focusMeasures = false): void {
   const p = profile(), u = unit();
   const ex = date ? p.entries.find(e => e.date === date) : undefined;
   editing = ex ? ex.date : null;
-  $('#entryTitle').textContent = ex ? 'Edit weigh-in' : 'Log weight';
+  $('#entryTitle').textContent = t(ex ? 'entry.editTitle' : 'entry.title');
   const dateIn = $<HTMLInputElement>('#eDate');
   dateIn.value = ex ? ex.date : todayISO();
   dateIn.max = todayISO();
   weightInputs(ex ? ex.kg : sortedEntries(p).at(-1)?.kg ?? null);
   $<HTMLTextAreaElement>('#eNote').value = ex?.note ?? '';
-  $('#eMeas').innerHTML = MEASURES.map(([k, l]) => {
+  $('#eMeas').innerHTML = MEASURES.map(([k]) => {
+    const l = measureLabel(k);
     const v = ex?.measures?.[k];
     return `<label class="f">${l} (${isMetric(u) ? 'cm' : 'in'})<input id="m_${k}" type="number" inputmode="decimal" step="0.1" min="1" value="${v != null ? (isMetric(u) ? v : (v / CM_IN).toFixed(1)) : ''}"></label>`;
   }).join('');
   $<HTMLDetailsElement>('#eMeasDetails').open = focusMeasures || !!ex?.measures;
   const del = $<HTMLButtonElement>('#eDelete');
-  del.hidden = !ex; del.dataset.armed = ''; del.classList.remove('armed'); del.textContent = 'Delete entry';
+  del.hidden = !ex; del.dataset.armed = ''; del.classList.remove('armed'); del.textContent = t('entry.delete');
   checkExists();
   dlg().showModal();
   setTimeout(() => {
@@ -64,7 +67,7 @@ function submit(ev: SubmitEvent): void {
   const err = $('#eError');
   if (!date || !isFinite(kg) || kg < 20 || kg > 400) {
     err.hidden = false;
-    err.textContent = `Enter a date and a weight between ${fmtW(20, u)} and ${fmtW(400, u)}.`;
+    err.textContent = t('entry.invalid', { min: fmtW(20, u), max: fmtW(400, u) });
     return;
   }
   err.hidden = true;
@@ -89,8 +92,8 @@ function submit(ev: SubmitEvent): void {
   const reached = newMilestones(before, milestonesFor(p, r).achieved);
   dlg().close();
   commit(reached.length
-    ? `Milestone: ${milestoneLabel(reached[reached.length - 1], r.dir, u)}!`
-    : wasEditing ? 'Weigh-in updated' : `Logged ${fmtW(e.kg, u)}`);
+    ? t('entry.milestone', { label: milestoneLabel(reached[reached.length - 1], r.dir, u) })
+    : wasEditing ? t('entry.updated') : t('entry.logged', { w: fmtW(e.kg, u) }));
 }
 
 export function initEntryDialog(): void {
@@ -99,12 +102,12 @@ export function initEntryDialog(): void {
   $('#entryCancel').addEventListener('click', () => dlg().close());
   $('#entryForm').addEventListener('submit', submit as EventListener);
   $('#eDelete').addEventListener('click', ev => {
-    armOrRun(ev.currentTarget as HTMLButtonElement, 'Confirm delete', () => {
+    armOrRun(ev.currentTarget as HTMLButtonElement, t('entry.confirmDelete'), () => {
       const p = profile();
       p.entries = p.entries.filter(e => e.date !== editing);
       p.updatedAt = Date.now();
       dlg().close();
-      commit('Entry deleted');
+      commit(t('entry.deleted'));
     });
   });
 }

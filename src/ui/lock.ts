@@ -3,6 +3,7 @@ import { sampleProfile } from '../data/sample';
 import { freshData } from '../data/schema';
 import { lockoutMs, verifyPin } from '../lib/pin';
 import { $, armOrRun } from './dom';
+import { t } from '../i18n';
 
 // Full-screen PIN prompt. Nothing from the user's data is rendered while it shows.
 
@@ -40,7 +41,7 @@ function showWait(): void {
   const tick = () => {
     const ms = waitingFor();
     if (ms <= 0) { clearInterval(countdown); message(''); return; }
-    message(`Too many wrong tries. Try again in ${Math.ceil(ms / 1000)} s.`, true);
+    message(t('lock.wait', { s: Math.ceil(ms / 1000) }), true);
   };
   tick();
   countdown = window.setInterval(tick, 1000);
@@ -66,7 +67,7 @@ async function check(): Promise<void> {
   drawDots();
   const box = $('.lock-box');
   box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
-  if (waitingFor() > 0) showWait(); else message('Wrong PIN. Try again.', true);
+  if (waitingFor() > 0) showWait(); else message(t('lock.wrong'), true);
 }
 
 function press(key: string): void {
@@ -112,8 +113,8 @@ export function initLock(): void {
   $('#forgotPin').addEventListener('click', () => { $('#forgotPanel').hidden = false; $('#keypad').hidden = true; });
   $('#forgotCancel').addEventListener('click', () => { $('#forgotPanel').hidden = true; $('#keypad').hidden = false; });
   $('#forgotErase').addEventListener('click', ev => {
-    armOrRun(ev.currentTarget as HTMLButtonElement, 'Erase everything on this device', () => {
-      app.data = freshData([sampleProfile()]);
+    armOrRun(ev.currentTarget as HTMLButtonElement, t('lock.eraseConfirm'), () => {
+      app.data = freshData([sampleProfile(undefined, app.sampleText())]);
       void app.persist(app.data);
       writeFails({ n: 0, until: 0 });
       hideLock();

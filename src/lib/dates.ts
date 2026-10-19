@@ -1,3 +1,5 @@
+import { formatLocale } from './format';
+
 // Dates are stored as ISO "YYYY-MM-DD" strings and handled in UTC so a
 // weigh-in never shifts to another day when the time zone changes.
 
@@ -16,7 +18,7 @@ export const daysBetween = (a: string, b: string): number =>
 export const addDays = (s: string, n: number): string => iso(new Date(toD(s).getTime() + n * DAY));
 
 export function fmtDate(s: string, o: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }): string {
-  return toD(s).toLocaleDateString(undefined, { ...o, timeZone: 'UTC' });
+  return toD(s).toLocaleDateString(formatLocale(), { ...o, timeZone: 'UTC' });
 }
 
 export const isISODate = (s: unknown): s is string =>

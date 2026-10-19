@@ -76,7 +76,10 @@ export function blankProfile(name = 'Me'): Profile {
   };
 }
 
-export class DataError extends Error {}
+export type DataErrorCode = 'notBackup' | 'newerVersion' | 'noProfiles' | 'csvEmpty' | 'csvColumns';
+export class DataError extends Error {
+  constructor(public code: DataErrorCode, message: string) { super(message); }
+}
 
 const num = (v: unknown): number | null => (typeof v === 'number' && isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && isFinite(+v) ? +v : null);
 const obj = (v: unknown): Record<string, unknown> | null => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
@@ -149,13 +152,13 @@ function cleanSettings(v: unknown): Settings {
  */
 export function migrate(raw: unknown, now = Date.now()): AppData {
   const o = obj(raw);
-  if (!o || !Array.isArray(o.profiles)) throw new DataError('This file is not a Tare backup.');
+  if (!o || !Array.isArray(o.profiles)) throw new DataError('notBackup', 'This file is not a Tare backup.');
   const version = num(o.version) ?? 1;
-  if (version > SCHEMA_VERSION) throw new DataError('This backup comes from a newer version of Tare. Update the app and try again.');
+  if (version > SCHEMA_VERSION) throw new DataError('newerVersion', 'This backup comes from a newer version of Tare. Update the app and try again.');
   // v1 (the original single-file app) had no ids on entries and no timestamps;
   // cleanProfile/cleanEntry fill those in, so v1 → v2 needs no extra step.
   const profiles = o.profiles.map(p => cleanProfile(p, now)).filter((p): p is Profile => !!p);
-  if (!profiles.length) throw new DataError('This backup has no profiles in it.');
+  if (!profiles.length) throw new DataError('noProfiles', 'This backup has no profiles in it.');
   const unit: Unit = o.unit === 'lb' || o.unit === 'st' ? o.unit : 'kg';
   const activeId = profiles.some(p => p.id === o.activeId) ? (o.activeId as string) : profiles[0].id;
   return { version: SCHEMA_VERSION, unit, activeId, profiles, settings: cleanSettings(o.settings) };

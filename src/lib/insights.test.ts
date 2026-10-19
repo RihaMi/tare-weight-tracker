@@ -76,7 +76,7 @@ describe('milestones', () => {
   it('notices moving into a better BMI category', () => {
     // 180 cm: BMI 30 at 97.2 kg, 25 at 81 kg.
     const { achieved } = milestones({ entries: [e('2026-01-01', 99), e('2026-02-01', 96), e('2026-03-01', 80.5)], goalKg: 78, heightCm: 180, unit: 'kg' });
-    expect(achieved.filter(m => m.kind === 'bmi').map(m => m.kind === 'bmi' && m.category)).toEqual(['Overweight', 'Normal']);
+    expect(achieved.filter(m => m.kind === 'bmi').map(m => m.kind === 'bmi' && m.category)).toEqual(['over', 'normal']);
   });
 
   it('works for a weight-gain goal', () => {

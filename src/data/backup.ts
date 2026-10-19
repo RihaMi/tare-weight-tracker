@@ -15,7 +15,7 @@ export const restoredData = (backup: AppData, current: AppData): AppData =>
 
 export function parseBackup(text: string): AppData {
   let raw: unknown;
-  try { raw = JSON.parse(text); } catch { throw new DataError('This file is not a Tare backup. Choose the .json file you exported.'); }
+  try { raw = JSON.parse(text); } catch { throw new DataError('notBackup', 'This file is not a Tare backup. Choose the .json file you exported.'); }
   return migrate(raw);
 }
 
@@ -68,11 +68,11 @@ export interface CSVImport { entries: Entry[]; skipped: number }
 /** Reads weigh-ins from a CSV with a header row (Tare's own export, or any file with date + weight columns). */
 export function parseCSV(text: string, now = Date.now()): CSVImport {
   const rows = parseCSVRows(text.replace(/^﻿/, ''));
-  if (rows.length < 2) throw new DataError('The CSV file has no rows to import.');
+  if (rows.length < 2) throw new DataError('csvEmpty', 'The CSV file has no rows to import.');
   const head = rows[0].map(h => h.trim().toLowerCase());
   const di = head.findIndex(h => h === 'date' || h === 'day');
   const wi = head.findIndex(h => h in WEIGHT_COLS);
-  if (di < 0 || wi < 0) throw new DataError('The CSV needs a "date" column and a weight column such as "weight_kg" or "weight_lb".');
+  if (di < 0 || wi < 0) throw new DataError('csvColumns', 'The CSV needs a "date" column and a weight column such as "weight_kg" or "weight_lb".');
   const factor = WEIGHT_COLS[head[wi]];
   const ni = head.indexOf('note');
   const mi = MEASURES.map(([k]) => [k, head.indexOf(`${k}_cm`)] as const);

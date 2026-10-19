@@ -71,7 +71,7 @@ export function caloriesView(): string {
 
   return `<div class="grid-2 calc-grid">
   <section class="card">
-    <div class="card-head"><h2>${t('calc.title')}</h2><button type="button" class="btn small-btn" id="calcReset">${t('calc.reset', { name })}</button></div>
+    <div class="card-head"><h2>${t('calc.title')}</h2><button type="button" class="btn small-btn btn-wrap" id="calcReset">${t('calc.reset', { name })}</button></div>
     ${filledIn.length ? `<p class="note flush callout">${t('calc.filledIn', { name, fields: filledIn.map(k => t(k)).join(', '), link: profileLink() })}</p>` : ''}
     <form id="calcForm" class="form" novalidate>
       <fieldset class="fs"><legend>${t('common.sex')}</legend><div class="opts row-opts">${radio('cSex', 'f', i.sex === 'f', t('common.female'))}${radio('cSex', 'm', i.sex === 'm', t('common.male'))}</div></fieldset>
@@ -85,7 +85,7 @@ export function caloriesView(): string {
       <fieldset class="fs"><legend>${t('calc.active')}</legend><div class="opts">
         ${ACTIVITY.map(([v]) => radio('cAct', v, v === i.activity, t(activityKey(v)), t(activityKey(v, '.d')))).join('')}
       </div>
-      <button type="button" class="btn ghost small-btn" id="calcSaveAct" ${i.activity === p.activity ? 'hidden' : ''}>${t('calc.saveAct', { name })}</button></fieldset>
+      <button type="button" class="btn ghost small-btn btn-wrap" id="calcSaveAct" ${i.activity === p.activity ? 'hidden' : ''}>${t('calc.saveAct', { name })}</button></fieldset>
       <fieldset class="fs"><legend>${t('common.goal')}</legend>
         <div class="opts row-opts">${radio('cGoal', 'lose', goalDir === 'lose', t('calc.lose'))}${radio('cGoal', 'maintain', goalDir === 'maintain', t('calc.maintain'))}${radio('cGoal', 'gain', goalDir === 'gain', t('calc.gain'))}</div>
         <label class="f" id="cPaceLoseWrap" ${goalDir === 'lose' ? '' : 'hidden'}>${t('calc.pace')}<select id="cPaceLose">${paceOpts('lose')}</select></label>
@@ -160,7 +160,8 @@ export function updateCalories(): void {
     ${plan.tooFast && !plan.floored ? `<p class="warnbox">${t('calc.tooFast')}</p>` : ''}
     <div class="energy" aria-hidden="true">
       <div class="energy-bar"><span class="seg-bmr" style="width:${w(bmr)}"></span><span class="seg-act" style="width:${w(tdee - bmr)}"></span></div>
-      <div class="energy-target" style="left:${w(target)}"><span>${t('calc.target')}</span></div>
+      <div class="energy-target" style="left:${w(target)}"></div>
+      <span class="energy-label ${target / scale > 0.6 ? 'flip' : ''}" style="left:${w(target)}">${t('calc.target')}</span>
     </div>
     <dl class="ledger">
       <dt><i class="sw seg-bmr"></i>${t('calc.bmr')}</dt><dd>${fmtInt(bmr)}</dd>

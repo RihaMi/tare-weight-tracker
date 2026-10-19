@@ -44,7 +44,7 @@ export function profileView(): string {
     </div>
     <p class="note" id="suggestNote" hidden></p>
     <div class="actions">
-      <button type="button" class="btn danger spacer" id="delProfile" ${app.data.profiles.length < 2 && !p.sample ? 'hidden' : ''}>${t('profile.delete')}</button>
+      <button type="button" class="btn danger spacer btn-wrap" id="delProfile" ${app.data.profiles.length < 2 && !p.sample ? 'hidden' : ''}>${t('profile.delete')}</button>
       <button type="submit" class="btn primary">${t('profile.save')}</button>
     </div>
   </form></section>
@@ -91,7 +91,7 @@ function showRestoreConfirm(): void {
   box.hidden = false;
   box.innerHTML = `<div class="warnbox">
     <p class="flush">${t('backup.confirm', { file: esc(pendingRestore.name), ...counts(pendingRestore.data) })}</p>
-    <div class="actions start"><button type="button" class="btn danger armed" id="restoreGo">${t('backup.replace')}</button><button type="button" class="btn" id="restoreCancel">${t('common.cancel')}</button></div></div>`;
+    <div class="actions start"><button type="button" class="btn danger armed btn-wrap" id="restoreGo">${t('backup.replace')}</button><button type="button" class="btn" id="restoreCancel">${t('common.cancel')}</button></div></div>`;
   $('#restoreGo').addEventListener('click', () => {
     app.data = restoredData(pendingRestore!.data, app.data); pendingRestore = null; resetCalories();
     app.applyLanguage();

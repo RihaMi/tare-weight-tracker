@@ -22,7 +22,7 @@ It was inspired by the iOS app *Monitor Your Weight* and rebuilt with a cleaner,
 - **Quick log.** If you haven't weighed in today, the log form opens by itself when you open Tare (once a day; can be turned off). On an installed app, long-press the icon and choose **Log weight**.
 - **Safe with several windows.** Tabs and the installed app stay in sync, so one window can't undo changes made in another.
 - **Backup reminder.** A reminder two weeks after you start logging, and again whenever your last backup is 30 days old.
-- **PIN lock.** An optional 4–6 digit PIN, with auto-lock after the app has been in the background. Only a salted hash is stored. It keeps people out of the app but doesn't encrypt the data.
+- **PIN lock with encryption.** An optional 4–6 digit PIN, with auto-lock after the app has been in the background. With a PIN, saved data is encrypted (AES-256-GCM, key derived from the PIN with PBKDF2) and can only be opened with it. Downloaded backups are not encrypted.
 - **Daily reminder.** A reminder inside the app if you haven't weighed in by your chosen time, plus a calendar file (.ics) with a daily alert for your phone.
 - **App icon badge.** On an installed app, the icon can show the weight left to your goal, or a dot until today's weigh-in.
 - **English and Czech.** Chosen automatically from the browser, or set under Profile & goal → App settings. Numbers and dates follow the language (84.1 kg / 84,1 kg).
@@ -74,6 +74,7 @@ public/        icons (regenerate with `npm run icons`)
 - All saved data goes through the `Store` interface in `src/data/storage.ts`. It uses IndexedDB today, falling back to localStorage. A cloud store for accounts and sync can be added later as another `Store`, without changing the screens.
 - The saved format has a version number (`SCHEMA_VERSION` in `src/data/schema.ts`). When the format changes, `migrate()` upgrades older data and backup files. Data from the original single-file version of Tare is picked up automatically.
 - Every weigh-in has an id and an `updatedAt` time, which a future sync would need to merge devices.
+- With a PIN, `createSaver` encrypts before saving (`src/lib/crypto.ts`) and `loadData` returns the encrypted envelope as `locked`; the lock screen decrypts it. Decrypting is the PIN check, so a wrong PIN can never produce data.
 
 ## Privacy
 

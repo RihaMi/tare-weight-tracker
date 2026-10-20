@@ -14,6 +14,9 @@ import { overviewView } from './ui/views/overview';
 import { bindProfile, downloadBackup, profileView } from './ui/views/profile';
 import { backupNudge } from './lib/backupNudge';
 import { announceSaved, initTabSync } from './ui/sync';
+import { keyInfoFor, newKeyInfo, seal, unseal, type Envelope } from './lib/crypto';
+import { verifyPin } from './lib/pin';
+import { migrate } from './data/schema';
 import { resetSettingsForm } from './ui/views/settings';
 import { updateBadge } from './ui/badge';
 import { initLock, isLocked, showLock } from './ui/lock';
@@ -22,6 +25,11 @@ import { isPastTime } from './lib/ics';
 import { todayISO } from './lib/dates';
 import { resolveLang, setLang, t, tn, translateStatic, type Key } from './i18n';
 import type { SampleText } from './data/sample';
+import { en } from './i18n/en';
+import { cs } from './i18n/cs';
+
+/** The example profile's default name in every language, to tell whether someone renamed it. */
+const SAMPLE_NAMES = new Set([en['sample.name'], cs['sample.name']].filter((v): v is string => typeof v === 'string'));
 
 const VIEWS: Record<Tab, () => string> = { overview: overviewView, history: historyView, body: bodyView, calories: caloriesView, profile: profileView };
 
@@ -94,12 +102,49 @@ function handleLaunchAction(): void {
   openEntry();
 }
 
+/**
+ * Unlocks encrypted data with a PIN. Reads the latest saved copy first (another
+ * window may have saved since this one started); decrypting it is the PIN check.
+ */
+async function unlockEncrypted(pin: string, fallback: Envelope): Promise<boolean> {
+  const { locked } = await loadData(app.store);
+  const env = locked ?? fallback;
+  try {
+    const key = await keyInfoFor(pin, env);
+    app.data = migrate(await unseal(env, key));
+    app.key = key;
+  } catch {
+    return false;
+  }
+  applyLanguage();
+  applyTheme(app.data.settings.theme);
+  resetCalories();
+  return true;
+}
+
+/**
+ * Unlocks data that's already loaded, checking the PIN hash. If the data isn't
+ * encrypted yet (PIN set before encryption existed), this derives the key and
+ * saves it encrypted from now on.
+ */
+async function unlockLoaded(pin: string): Promise<boolean> {
+  const stored = app.data.settings.pin;
+  if (!stored || !(await verifyPin(pin, stored))) return false;
+  if (!app.key) {
+    app.key = await newKeyInfo(pin);
+    void app.persist(app.data);
+  }
+  return true;
+}
+
 let hiddenAt = 0;
-function lockNow(): void {
+function lockNow(env?: Envelope): void {
   $<HTMLDialogElement>('#entryDlg').close();
   $('#view').innerHTML = '';
   $('#profileSel').innerHTML = '';
-  showLock(() => { render(); maybeQuickLog(); });
+  const then = () => { render(); maybeQuickLog(); };
+  if (env) { app.key = null; showLock(then, { length: env.pinLength, verify: pin => unlockEncrypted(pin, env) }); }
+  else showLock(then, { verify: unlockLoaded });
 }
 
 /** Locks again after Tare has been in the background for the chosen time. */
@@ -235,7 +280,7 @@ function applyLanguage(): void {
   const sample = app.data.profiles.find(p => p.sample);
   if (sample) {
     const text = sampleText();
-    sample.name = text.name;
+    if (SAMPLE_NAMES.has(sample.name)) sample.name = text.name;
     for (const e of sample.entries) {
       const d = Number(e.id.replace('sample_', ''));
       const k = Object.keys(text.notes).map(Number).find(n => Math.abs(n - d) <= 1);
@@ -246,26 +291,29 @@ function applyLanguage(): void {
 
 async function start(): Promise<void> {
   const store = await openStore();
-  const { data, imported } = await loadData(store);
+  const { data, imported, locked } = await loadData(store);
   app.store = store;
+  app.key = null;
   app.sampleText = sampleText;
   app.applyLanguage = applyLanguage;
   setLang(resolveLang(data?.settings.lang ?? 'auto'));
+  // While encrypted data waits for the PIN, a placeholder keeps the app working. It is never saved.
   app.data = data ?? freshData([sampleProfile(undefined, sampleText())]);
   applyLanguage();
   applyTheme(app.data.settings.theme);
-  const save = createSaver(store, () => toast(t('app.saveFailed')));
+  // With a PIN (and its key, once unlocked) every save is encrypted.
+  const save = createSaver(store, () => toast(t('app.saveFailed')), d => (d.settings.pin && app.key ? seal(d, app.key) : d));
   app.persist = d => save(d).then(announceSaved);
   const h = location.hash.slice(1);
   app.tab = isTab(h) ? h : 'overview';
   app.chartRange = 90;
   app.render = render;
-  if (!data) void app.persist(app.data);
+  if (!data && !locked) void app.persist(app.data); // first run only: never write over encrypted data
   void navigator.storage?.persist?.();
   initEntryDialog();
   initLock();
   bindGlobalEvents();
-  initTabSync(onExternalChange);
+  initTabSync(onExternalChange, env => lockNow(env));
   setupInstall();
   setupAutoLock();
   const afterUnlock = () => {
@@ -274,7 +322,9 @@ async function start(): Promise<void> {
     const fromShortcut = new URLSearchParams(location.search).get('action') === 'log';
     if (fromShortcut) handleLaunchAction(); else maybeQuickLog();
   };
-  if (app.data.settings.pin) showLock(afterUnlock); else afterUnlock();
+  if (locked) showLock(afterUnlock, { length: locked.pinLength, verify: pin => unlockEncrypted(pin, locked) });
+  else if (app.data.settings.pin) showLock(afterUnlock, { verify: unlockLoaded });
+  else afterUnlock();
   if (import.meta.env.PROD) setupUpdates();
 }
 

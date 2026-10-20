@@ -1,6 +1,7 @@
 import type { AppData, Profile, Unit } from './data/schema';
 import type { Store } from './data/storage';
 import type { SampleText } from './data/sample';
+import type { KeyInfo } from './lib/crypto';
 import { toast } from './ui/dom';
 
 export const TABS = ['overview', 'history', 'body', 'calories', 'profile'] as const;
@@ -18,6 +19,8 @@ interface AppState {
   applyLanguage: () => void;
   /** Name and notes for the example profile, in the current language. */
   sampleText: () => SampleText;
+  /** Encryption key from the PIN while unlocked; saves are encrypted with it. Null without a PIN. */
+  key: KeyInfo | null;
 }
 
 // Filled in by main.ts during start-up, before anything renders.

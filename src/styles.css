@@ -408,6 +408,11 @@ main { padding-top: 20px; display: grid; gap: 16px; }
 .backup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; margin-top: 16px; }
 .bk { border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 10px; align-content: start; }
 .bk h3 { font-size: .95rem; }
+.importbox { background: var(--accent-soft); border-radius: 10px; padding: 12px; display: grid; gap: 8px; font-size: .9rem; overflow-wrap: anywhere; }
+.importbox .actions { margin-top: 4px; }
+.import-unit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bk details.how[open] summary { margin-bottom: 6px; }
+.bk details.how .note { margin: 0; }
 
 /* Forms */
 .form { display: grid; gap: 14px; }

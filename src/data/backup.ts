@@ -1,8 +1,7 @@
-import { isISODate } from '../lib/dates';
-import { DataError, MEASURES, migrate, newId, type AppData, type Entry, type Measures, type Profile } from './schema';
+import { DataError, MEASURES, migrate, type AppData, type Entry, type Profile } from './schema';
 
 // Full backups are JSON (every profile and setting). CSV is for one profile's
-// weigh-ins, to open in a spreadsheet or bring in from another app.
+// weigh-ins, to open in a spreadsheet. Importing from other apps is in importers.ts.
 
 /** The PIN stays on the device: a backup never carries it, so restoring can't lock you out. */
 export function toBackupJSON(data: AppData, now = new Date()): string {
@@ -32,9 +31,10 @@ export function toCSV(p: Profile): string {
   return [head.join(','), ...rows].join('\n') + '\n';
 }
 
-/** Spreadsheets in many European locales save CSV with semicolons; tell from the header row. */
-function detectSeparator(text: string): ',' | ';' {
+/** Spreadsheets in many European locales save CSV with semicolons, and some apps use tabs; tell from the header row. */
+function detectSeparator(text: string): ',' | ';' | '\t' {
   const head = text.split(/\r?\n/, 1)[0] ?? '';
+  if (head.includes('\t') && !head.includes(',') && !head.includes(';')) return '\t';
   return head.includes(';') && !head.includes(',') ? ';' : ',';
 }
 
@@ -59,38 +59,6 @@ export function parseCSVRows(text: string, sep = detectSeparator(text)): string[
   row.push(field);
   if (row.some(f => f.trim() !== '')) rows.push(row);
   return rows;
-}
-
-const WEIGHT_COLS: Record<string, number> = { weight_kg: 1, kg: 1, weight: 1, 'weight (kg)': 1, weight_lb: 0.45359237, lb: 0.45359237, lbs: 0.45359237, 'weight (lb)': 0.45359237 };
-
-export interface CSVImport { entries: Entry[]; skipped: number }
-
-/** Reads weigh-ins from a CSV with a header row (Tare's own export, or any file with date + weight columns). */
-export function parseCSV(text: string, now = Date.now()): CSVImport {
-  const rows = parseCSVRows(text.replace(/^﻿/, ''));
-  if (rows.length < 2) throw new DataError('csvEmpty', 'The CSV file has no rows to import.');
-  const head = rows[0].map(h => h.trim().toLowerCase());
-  const di = head.findIndex(h => h === 'date' || h === 'day');
-  const wi = head.findIndex(h => h in WEIGHT_COLS);
-  if (di < 0 || wi < 0) throw new DataError('csvColumns', 'The CSV needs a "date" column and a weight column such as "weight_kg" or "weight_lb".');
-  const factor = WEIGHT_COLS[head[wi]];
-  const ni = head.indexOf('note');
-  const mi = MEASURES.map(([k]) => [k, head.indexOf(`${k}_cm`)] as const);
-  const entries: Entry[] = [];
-  let skipped = 0;
-  for (const r of rows.slice(1)) {
-    const date = (r[di] ?? '').trim();
-    const kg = parseFloat((r[wi] ?? '').replace(',', '.')) * factor;
-    if (!isISODate(date) || !isFinite(kg) || kg < 20 || kg > 400) { skipped++; continue; }
-    const e: Entry = { id: newId('e_'), date, kg: Math.round(kg * 100) / 100, updatedAt: now };
-    const note = ni >= 0 ? (r[ni] ?? '').trim() : '';
-    if (note) e.note = note.slice(0, 500);
-    const m: Measures = {};
-    for (const [k, i] of mi) { const v = i >= 0 ? parseFloat(r[i] ?? '') : NaN; if (isFinite(v) && v > 0) m[k] = v; }
-    if (Object.keys(m).length) e.measures = m;
-    entries.push(e);
-  }
-  return { entries, skipped };
 }
 
 /** Adds imported weigh-ins to a profile. An imported date replaces an existing weigh-in on that date. */

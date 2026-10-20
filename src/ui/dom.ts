@@ -23,17 +23,20 @@ export function download(filename: string, text: string, type: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** Opens the system file picker and resolves with the chosen file's text, or null if cancelled. */
-export function pickTextFile(accept: string): Promise<{ name: string; text: string } | null> {
+/** Opens the system file picker and resolves with the chosen file, or null if cancelled. */
+export function pickFile(accept: string): Promise<File | null> {
   return new Promise(resolve => {
     const input = Object.assign(document.createElement('input'), { type: 'file', accept });
-    input.addEventListener('change', async () => {
-      const f = input.files?.[0];
-      resolve(f ? { name: f.name, text: await f.text() } : null);
-    });
+    input.addEventListener('change', () => resolve(input.files?.[0] ?? null));
     input.addEventListener('cancel', () => resolve(null));
     input.click();
   });
+}
+
+/** Like pickFile, but resolves with the file's text. */
+export async function pickTextFile(accept: string): Promise<{ name: string; text: string } | null> {
+  const f = await pickFile(accept);
+  return f ? { name: f.name, text: await f.text() } : null;
 }
 
 /** Two-step confirm on a button: first click arms it, second click runs. */

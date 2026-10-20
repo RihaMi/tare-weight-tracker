@@ -1,12 +1,13 @@
 import { app, commit, go, profile, unit } from '../../app';
-import { mergeEntries, parseBackup, parseCSV, restoredData, toBackupJSON, toCSV } from '../../data/backup';
+import { mergeEntries, parseBackup, restoredData, toBackupJSON, toCSV } from '../../data/backup';
+import { guessUnit, readImportFile, toEntries, type ImportPreview, type WeightUnit } from '../../data/importers';
 import { DataError, blankProfile, type AppData, type Frame, type Profile } from '../../data/schema';
 import { t, tn, type Key } from '../../i18n';
 import { calc, idealKg } from '../../lib/calc';
 import { ACTIVITY } from '../../lib/calories';
 import { addDays, fmtDate, todayISO } from '../../lib/dates';
-import { CM_IN, deltaUnit, disp, fromDisp, isMetric } from '../../lib/units';
-import { $, armOrRun, download, esc, pickTextFile, toast } from '../dom';
+import { CM_IN, deltaUnit, disp, fmtW, fromDisp, isMetric } from '../../lib/units';
+import { $, armOrRun, download, esc, pickFile, pickTextFile, toast } from '../dom';
 import { isIOSBrowserTab } from '../../lib/backupNudge';
 import { resetCalories } from './calories';
 import { activityKey } from './overview';
@@ -14,6 +15,7 @@ import { bindSettings, settingsCard } from './settings';
 import { applyTheme } from '../theme';
 
 let pendingRestore: { data: AppData; name: string } | null = null;
+let pendingImport: { name: string; preview: ImportPreview; unit: WeightUnit } | null = null;
 
 const counts = (d: AppData) => ({
   profiles: tn('backup.profiles', d.profiles.length),
@@ -66,6 +68,8 @@ export function profileView(): string {
         <h3>${t('backup.csv')}</h3>
         <p class="note flush">${t('backup.csvText', { name: esc(p.name) })}</p>
         <div class="actions start"><button type="button" class="btn" id="csvDownload">${t('backup.csvDownload')}</button><button type="button" class="btn" id="csvImport">${t('backup.csvImport')}</button></div>
+        <div id="importConfirm" hidden></div>
+        <details class="how"><summary>${t('backup.moveHow')}</summary><p class="note">${t('backup.moveHowText')}</p></details>
       </div>
     </div>
   </section>
@@ -103,6 +107,61 @@ function showRestoreConfirm(): void {
   });
   $('#restoreCancel').addEventListener('click', () => { pendingRestore = null; showRestoreConfirm(); });
 }
+
+const IMPORT_TYPES = '.csv,.tsv,.txt,.xml,.zip,text/csv,text/plain,application/zip,application/xml,text/xml';
+const longDate = (s: string) => fmtDate(s, { day: 'numeric', month: 'short', year: 'numeric' });
+
+/** What a picked file holds, before anything is saved, so a wrong unit or date order shows up first. */
+function showImportConfirm(reading?: string): void {
+  const box = $('#importConfirm');
+  if (!box) return;
+  if (reading) { box.hidden = false; box.innerHTML = `<p class="note flush" role="status">${t('import.reading', { file: esc(reading) })}</p>`; return; }
+  if (!pendingImport) { box.hidden = true; box.innerHTML = ''; return; }
+  const { name, preview: pv, unit: fileUnit } = pendingImport;
+  const u = unit(), p = profile();
+  const { entries, outOfRange } = toEntries(pv, fileUnit);
+  const kgs = entries.map(e => e.kg);
+  const have = new Set(p.sample ? [] : p.entries.map(e => e.date));
+  const replaces = entries.filter(e => have.has(e.date)).length;
+  const units: WeightUnit[] = ['kg', 'lb', 'st'];
+  box.hidden = false;
+  box.innerHTML = `<div class="importbox">
+    ${entries.length ? `<p class="flush">${t('import.summary', {
+      file: esc(name), entries: tn('backup.entries', entries.length), from: longDate(entries[0].date), to: longDate(entries[entries.length - 1].date),
+      min: fmtW(Math.min(...kgs), u), max: fmtW(Math.max(...kgs), u) })}</p>` : `<p class="flush">${t('backup.importNone')}</p>`}
+    ${pv.sources?.length ? `<p class="note flush">${t('import.sources', { list: esc(pv.sources.slice(0, 4).join(', ')) })}</p>` : ''}
+    ${pv.unit == null ? `<div class="import-unit"><span>${t('import.unitQ')}</span><div class="seg" role="group" aria-label="${esc(t('header.units'))}">${units.map(x => `<button type="button" data-import-unit="${x}" aria-pressed="${x === fileUnit}">${x}</button>`).join('')}</div></div>` : ''}
+    ${replaces ? `<p class="note flush">${tn('import.replaces', replaces, { name: esc(p.name) })}</p>` : ''}
+    ${pv.sameDay ? `<p class="note flush">${tn('import.sameDay', pv.sameDay)}</p>` : ''}
+    ${pv.skipped ? `<p class="note flush">${tn('import.skipped', pv.skipped)}</p>` : ''}
+    ${outOfRange ? `<p class="note flush">${tn('import.outOfRange', outOfRange)}</p>` : ''}
+    ${p.sample && entries.length ? `<p class="note flush">${t('import.newProfile')}</p>` : ''}
+    <div class="actions start">${entries.length ? `<button type="button" class="btn primary btn-wrap" id="importGo">${tn('import.go', entries.length)}</button>` : ''}<button type="button" class="btn" id="importCancel">${t('common.cancel')}</button></div>
+  </div>`;
+  box.querySelectorAll<HTMLButtonElement>('[data-import-unit]').forEach(b => b.addEventListener('click', () => {
+    pendingImport!.unit = b.dataset.importUnit as WeightUnit;
+    showImportConfirm();
+    box.querySelector<HTMLButtonElement>(`[data-import-unit="${pendingImport!.unit}"]`)?.focus();
+  }));
+  $('#importGo')?.addEventListener('click', () => {
+    let target = profile();
+    // Real weigh-ins don't belong in the example profile.
+    if (target.sample) {
+      target = blankProfile(t(app.data.profiles.some(x => !x.sample) ? 'profile.newName' : 'profile.defaultName'));
+      app.data.profiles.push(target);
+      app.data.activeId = target.id;
+      resetCalories();
+    }
+    const { added, replaced } = mergeEntries(target, entries);
+    const left = pv.skipped + outOfRange;
+    pendingImport = null;
+    commit(t('backup.imported', { n: added }) + (replaced ? t('backup.importedUpdated', { n: replaced }) : '') + (left ? t('backup.importedSkipped', { n: left }) : ''));
+  });
+  $('#importCancel').addEventListener('click', () => { pendingImport = null; showImportConfirm(); });
+}
+
+/** Clears a half-finished import when leaving the screen. */
+export const resetImport = (): void => { pendingImport = null; };
 
 const fileStamp = () => todayISO();
 const todayISOFrom = (ms: number) => todayISO(new Date(ms));
@@ -163,13 +222,17 @@ export function bindProfile(): void {
     toast(t('backup.csvDownloaded'));
   });
   $('#csvImport').addEventListener('click', async () => {
-    const file = await pickTextFile('.csv,text/csv');
+    const file = await pickFile(IMPORT_TYPES);
     if (!file) return;
+    pendingImport = null;
+    showImportConfirm(file.name);
     try {
-      const { entries, skipped } = parseCSV(file.text);
-      if (!entries.length) { toast(t('backup.importNone')); return; }
-      const { added, replaced } = mergeEntries(p, entries);
-      commit(t('backup.imported', { n: added }) + (replaced ? t('backup.importedUpdated', { n: replaced }) : '') + (skipped ? t('backup.importedSkipped', { n: skipped }) : ''));
-    } catch (e) { toast(fileError(e)); }
+      // US-style month/day is only assumed when a file's dates could be read either way.
+      const preview = await readImportFile(file, navigator.language === 'en-US');
+      pendingImport = { name: file.name, preview, unit: guessUnit(preview) };
+      showImportConfirm();
+      $('#importConfirm')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    } catch (e) { showImportConfirm(); toast(fileError(e)); }
   });
+  showImportConfirm();
 }

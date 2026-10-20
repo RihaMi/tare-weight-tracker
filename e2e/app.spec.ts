@@ -56,17 +56,35 @@ test('a PIN locks the app until it is entered', async ({ page }) => {
   await expect(page.locator('#view')).toBeVisible();
 });
 
-test('imports weigh-ins from a CSV file', async ({ page }) => {
-  await open(page, '/#profile');
+async function pickImport(page: Page, name: string, text: string) {
   const chooser = page.waitForEvent('filechooser');
   await page.locator('#csvImport').click();
-  await (await chooser).setFiles({
-    name: 'weights.csv', mimeType: 'text/csv',
-    buffer: Buffer.from('date,weight_kg,note\n2020-01-01,90.5,first\n2020-01-02,90.1,\n'),
-  });
+  await (await chooser).setFiles({ name, mimeType: 'text/csv', buffer: Buffer.from(text) });
+  await expect(page.locator('#importConfirm .importbox')).toBeVisible();
+}
+
+test('imports weigh-ins from a CSV file after a preview, into a new profile', async ({ page }) => {
+  await open(page, '/#profile');
+  await pickImport(page, 'weights.csv', 'date,weight_kg,note\n2020-01-01,90.5,first\n2020-01-02,90.1,\n');
+  await expect(page.locator('#importConfirm')).toContainText('2 weigh-ins from Jan 1, 2020 to Jan 2, 2020');
+  await expect(page.locator('#importConfirm')).toContainText('new profile');
+  await page.locator('#importGo').click();
   await expect(toast(page)).toContainText('Imported 2 new');
+  await expect(page.locator('#profileSel option:checked')).not.toContainText('example');
   await page.goto('/#history');
   await expect(page.locator('.month h3').last()).toContainText('January 2020');
+});
+
+test('asks for the unit when an imported file does not say', async ({ page }) => {
+  await open(page, '/#profile');
+  await pickImport(page, 'other-app.csv', 'Date,Weight,BMI\n03/04/2026,181.2,27.5\n03/05/2026,180.6,27.4\n');
+  // Weights this high are suggested as pounds; switching to kg shows them as kg.
+  await expect(page.locator('[data-import-unit=lb]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#importConfirm')).toContainText('Mar 4, 2026 to Mar 5, 2026');
+  await page.locator('[data-import-unit=kg]').click();
+  await expect(page.locator('#importConfirm')).toContainText('180.6 kg and 181.2 kg');
+  await page.locator('#importCancel').click();
+  await expect(page.locator('#importConfirm')).toBeHidden();
 });
 
 test.describe('in Czech', () => {

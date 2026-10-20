@@ -82,7 +82,7 @@ export function blankProfile(name = 'Me'): Profile {
   };
 }
 
-export type DataErrorCode = 'notBackup' | 'newerVersion' | 'noProfiles' | 'csvEmpty' | 'csvColumns';
+export type DataErrorCode = 'notBackup' | 'newerVersion' | 'noProfiles' | 'csvEmpty' | 'csvColumns' | 'notHealth' | 'notZip';
 export class DataError extends Error {
   constructor(public code: DataErrorCode, message: string) { super(message); }
 }

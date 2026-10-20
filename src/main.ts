@@ -12,7 +12,7 @@ import { bodyView } from './ui/views/body';
 import { bindCalories, caloriesView, resetCalories } from './ui/views/calories';
 import { historyView, toggleWeeks } from './ui/views/history';
 import { overviewView } from './ui/views/overview';
-import { bindProfile, downloadBackup, profileView } from './ui/views/profile';
+import { bindProfile, downloadBackup, profileView, resetImport } from './ui/views/profile';
 import { backupNudge } from './lib/backupNudge';
 import { announceSaved, initTabSync } from './ui/sync';
 import { resetSettingsForm } from './ui/views/settings';
@@ -70,7 +70,7 @@ function render(): void {
   view.innerHTML = (app.tab === 'profile' ? '' : reminderBanner() + (app.tab === 'overview' ? backupBanner() : '') + sampleBanner()) + VIEWS[app.tab]();
   if (app.tab === 'overview') drawOverviewChart();
   if (app.tab === 'calories') bindCalories();
-  if (app.tab === 'profile') bindProfile(); else resetSettingsForm();
+  if (app.tab === 'profile') bindProfile(); else { resetSettingsForm(); resetImport(); }
   updateBadge();
 }
 

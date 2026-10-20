@@ -4,3 +4,7 @@ dev-dist/
 *.log
 .DS_Store
 .claude/
+test-results/
+playwright-report/
+.lighthouseci/
+lighthouse-report/

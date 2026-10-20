@@ -22,22 +22,24 @@ export function milestoneLabel(m: Milestone, dir: number, u: Unit): string {
     case 'goal': return t('ms.goal');
     case 'bmi': return m.category === 'normal' ? t('ms.bmiHealthy') : t('ms.bmi', { cat: t(`bmi.${m.category}` as Key).toLowerCase() });
     case 'maintain': return t(`ms.maintain${m.days}` as Key);
+    case 'step': return t('ms.step', { w: fmtW(m.kg, u) });
   }
 }
 
 function nextLabel(n: NextMilestone, dir: number, u: Unit): string {
   if (n.kind === 'weight') return amountLabel(n.amountKg!, dir, u);
   if (n.kind === 'progress') return t('ms.progressShort', { pct: n.pct! });
+  if (n.kind === 'step') return t('ms.stepNext', { w: fmtW(n.stepKg!, u) });
   return t('ms.goalNext');
 }
 
 /** How far along the way to `next` the bar should be, 0..1. */
 function nextFraction(n: NextMilestone, p: Profile, r: Stats, u: Unit): number {
-  const span = n.kind === 'weight' ? milestoneStepKg(u) : r.hasGoal ? Math.abs(p.goalKg! - r.start!) * 0.25 : 1;
+  const span = n.kind === 'weight' ? milestoneStepKg(u) : n.kind === 'step' ? Math.abs(n.stepKg! - n.fromKg!) : r.hasGoal ? Math.abs(p.goalKg! - r.start!) * 0.25 : 1;
   return Math.min(1, Math.max(0, 1 - n.remainingKg / span));
 }
 
-export const milestonesFor = (p: Profile, r: Stats) => milestones({ entries: r.E, goalKg: p.goalKg, heightCm: p.heightCm, unit: unit() });
+export const milestonesFor = (p: Profile, r: Stats) => milestones({ entries: r.E, goalKg: p.goalKg, heightCm: p.heightCm, unit: unit(), steps: p.goalSteps });
 
 const msItem = (m: Milestone, dir: number, u: Unit, date: string) =>
   `<li><span class="ms-dot ${m.kind}"></span><span>${milestoneLabel(m, dir, u)}</span><span class="muted">${date}</span></li>`;

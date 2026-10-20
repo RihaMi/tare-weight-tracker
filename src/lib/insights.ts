@@ -1,4 +1,4 @@
-import type { Entry, Unit } from '../data/schema';
+import type { Entry, GoalStep, Unit } from '../data/schema';
 import { addDays, daysBetween, toD } from './dates';
 import { BMI_CATS, bmiCategory, type BmiId } from './health';
 import { LB } from './units';
@@ -69,16 +69,19 @@ export type Milestone =
   | { key: string; kind: 'progress'; pct: 25 | 50 | 75; date: string }
   | { key: string; kind: 'goal'; date: string }
   | { key: string; kind: 'bmi'; category: BmiId; date: string }
-  | { key: string; kind: 'maintain'; days: MaintainDays; date: string };
+  | { key: string; kind: 'maintain'; days: MaintainDays; date: string }
+  | { key: string; kind: 'step'; kg: number; date: string };
 
 /** Time spent at the goal (in the maintenance range) that counts as a milestone. */
 export type MaintainDays = 28 | 91 | 365;
 const MAINTAIN_DAYS: readonly MaintainDays[] = [28, 91, 365];
 
 export interface NextMilestone {
-  kind: 'weight' | 'progress' | 'goal';
+  kind: 'weight' | 'progress' | 'goal' | 'step';
   amountKg?: number;
   pct?: number;
+  stepKg?: number;      // kind 'step': the step's weight
+  fromKg?: number;      // kind 'step': where the way to it started (the step before, or the start)
   remainingKg: number; // still to change, always positive
 }
 
@@ -88,12 +91,24 @@ export const milestoneStepKg = (u: Unit): number => (u === 'kg' ? 5 : u === 'lb'
 export interface MilestoneInput {
   entries: Entry[];       // sorted oldest first
   goalKg: number | null;
+  steps?: GoalStep[];
   heightCm: number | null;
   unit: Unit;
 }
 
 /** Milestones reached so far (oldest first) and the closest one still ahead. */
-export function milestones({ entries, goalKg, heightCm, unit }: MilestoneInput): { achieved: Milestone[]; next: NextMilestone | null } {
+/**
+ * Goal steps that lie on the way, nearest the start first. Steps not between
+ * the start and the goal (or, without a goal, behind the start) are left out.
+ */
+export function orderedSteps(steps: GoalStep[], startKg: number, goalKg: number | null): GoalStep[] {
+  const dir = goalKg != null && goalKg > startKg ? 1 : -1;
+  return steps
+    .filter(s => dir * (s.kg - startKg) > 0.05 && (goalKg == null || dir * (goalKg - s.kg) > 0.05))
+    .sort((a, b) => dir * (a.kg - b.kg));
+}
+
+export function milestones({ entries, goalKg, heightCm, unit, steps = [] }: MilestoneInput): { achieved: Milestone[]; next: NextMilestone | null } {
   if (!entries.length) return { achieved: [], next: null };
   const start = entries[0].kg, cur = entries[entries.length - 1].kg;
   const hasGoal = goalKg != null && Math.abs(goalKg - start) > 0.05;
@@ -105,6 +120,8 @@ export function milestones({ entries, goalKg, heightCm, unit }: MilestoneInput):
   let stepsDone = 0;
   const pctDone = new Set<number>();
   let goalDone = false;
+  const ways = orderedSteps(steps, start, hasGoal ? goalKg : null);
+  const stepsDoneAt = new Map<string, string>();
   const h2 = heightCm ? (heightCm / 100) ** 2 : 0;
   const normalIdx = 1;
   let bestBmiIdx = h2 ? BMI_CATS.indexOf(bmiCategory(start / h2)) : -1;
@@ -122,6 +139,12 @@ export function milestones({ entries, goalKg, heightCm, unit }: MilestoneInput):
       }
       if (!goalDone && progress >= 1) { goalDone = true; achieved.push({ key: 'goal', kind: 'goal', date: e.date }); }
     }
+    for (const s of ways) {
+      if (!stepsDoneAt.has(s.id) && dir * (e.kg - s.kg) >= 0) {
+        stepsDoneAt.set(s.id, e.date);
+        achieved.push({ key: `s${s.id}`, kind: 'step', kg: s.kg, date: e.date });
+      }
+    }
     if (h2) {
       const idx = BMI_CATS.indexOf(bmiCategory(e.kg / h2));
       const better = dir < 0 ? idx < bestBmiIdx && idx >= normalIdx : idx > bestBmiIdx && idx <= normalIdx;
@@ -133,6 +156,11 @@ export function milestones({ entries, goalKg, heightCm, unit }: MilestoneInput):
   const candidates: NextMilestone[] = [];
   const movedNow = toward(cur);
   candidates.push({ kind: 'weight', amountKg: (stepsDone + 1) * step, remainingKg: (stepsDone + 1) * step - movedNow });
+  const pendingStep = ways.find(s => !stepsDoneAt.has(s.id));
+  if (pendingStep) {
+    const before = [...ways].reverse().find(s => stepsDoneAt.has(s.id));
+    candidates.push({ kind: 'step', stepKg: pendingStep.kg, fromKg: before?.kg ?? start, remainingKg: toward(pendingStep.kg) - movedNow });
+  }
   if (hasGoal && !goalDone) {
     const span = Math.abs(goalKg! - start);
     for (const pct of [25, 50, 75]) if (!pctDone.has(pct)) candidates.push({ kind: 'progress', pct, remainingKg: (span * pct) / 100 - movedNow });

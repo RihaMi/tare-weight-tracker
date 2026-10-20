@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { migrate, type Entry, type WeightEvent } from '../data/schema';
+import { SCHEMA_VERSION, migrate, type Entry, type WeightEvent } from '../data/schema';
 import { addDays } from './dates';
 import { eventEffect, eventsOn } from './events';
 
@@ -49,7 +49,7 @@ describe('events in saved data', () => {
 
   it('upgrades older data with no events', () => {
     const d = migrate(base);
-    expect(d.version).toBe(4);
+    expect(d.version).toBe(SCHEMA_VERSION);
     expect(d.profiles[0].events).toEqual([]);
   });
 

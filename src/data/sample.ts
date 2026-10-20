@@ -54,5 +54,7 @@ export function sampleProfile(today = todayISO(), text: SampleText = ENGLISH): P
       { id: 'sample_ev_away', kind: 'holiday', label: text.events.away, start: addDays(start, 22), end: addDays(start, 24), updatedAt: now },
       { id: 'sample_ev_runs', kind: 'training', label: text.events.runs, start: addDays(start, 41), end: null, updatedAt: now },
     ],
+    // Two steps toward the 80 kg goal: one already behind, one still ahead.
+    goalSteps: [{ id: 'sample_st_85', kg: 85, date: null }, { id: 'sample_st_82', kg: 82, date: addDays(today, 42) }],
   };
 }

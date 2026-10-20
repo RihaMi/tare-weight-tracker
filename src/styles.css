@@ -191,6 +191,18 @@ main { padding-top: 20px; display: grid; gap: 16px; }
 .ruler-fill { position: absolute; left: 0; top: 18px; height: 6px; border-radius: 3px; background: var(--accent); transition: width .6s ease; }
 .ruler-mark { position: absolute; top: 0; width: 2px; height: 30px; background: var(--ink); transform: translateX(-1px); transition: left .6s ease; }
 .ruler-mark::after { content: ""; position: absolute; top: 14px; left: -5px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 3px solid var(--ink); }
+/* Goal steps on the ruler: small ticks, filled once reached. */
+.ruler-step { position: absolute; top: 15px; width: 10px; height: 12px; transform: translateX(-5px); border-radius: 3px; background: var(--surface); border: 2px solid var(--accent); }
+.ruler-step.done { background: var(--accent); }
+.step-line { margin-top: 10px; }
+.steps-edit { margin-top: 18px; display: grid; gap: 10px; }
+.step-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+.step-row input { min-width: 0; width: 100%; }
+/* On a phone: weight and remove on one line, the date under them. */
+@media (max-width: 480px) {
+  .step-row { grid-template-columns: minmax(0, 1fr) auto; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+  .step-row label:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+}
 .ruler-labels { display: flex; justify-content: space-between; gap: 8px; font-size: .8rem; color: var(--muted); margin-top: 4px; }
 .ruler-labels b { color: var(--ink); font-family: var(--f-mono); font-weight: 500; }
 

@@ -5,10 +5,12 @@ import { migrate } from '../../data/schema';
 import { formatLocale } from '../../lib/format';
 import { autoBackupState, backUpNow, chooseBackupFolder, resumeAutoBackup, stopAutoBackup } from '../autoBackup';
 import { guessUnit, readImportFile, toEntries, type ImportPreview, type WeightUnit } from '../../data/importers';
-import { DataError, blankProfile, type AppData, type Frame, type Profile } from '../../data/schema';
+import { DataError, blankProfile, newId, type AppData, type Frame, type Profile } from '../../data/schema';
 import { t, tn, type Key } from '../../i18n';
 import { calc } from '../../lib/calc';
 import { suggestGoal } from '../../lib/health';
+import { orderedSteps } from '../../lib/insights';
+import { suggestSteps } from '../../lib/steps';
 import { ACTIVITY } from '../../lib/calories';
 import { addDays, fmtDate, todayISO } from '../../lib/dates';
 import { CM_IN, deltaUnit, disp, fmtW, fromDisp, isMetric } from '../../lib/units';
@@ -54,6 +56,7 @@ export function profileView(): string {
       <label class="f">${t('profile.goalDate')}<input id="pGoalDate" type="date" value="${p.goalDate ?? ''}"></label>
     </div>
     <p class="note" id="suggestNote" hidden></p>
+    ${stepsEditor(p)}
     <div class="actions">
       <button type="button" class="btn danger spacer btn-wrap" id="delProfile" ${app.data.profiles.length < 2 && !p.sample ? 'hidden' : ''}>${t('profile.delete')}</button>
       <button type="submit" class="btn primary">${t('profile.save')}</button>
@@ -84,6 +87,28 @@ export function profileView(): string {
   ${settingsCard()}`;
 }
 
+function stepRow(kg: number | null, date: string | null): string {
+  const u = unit();
+  return `<div class="step-row">
+    <label class="f">${t('steps.weight', { unit: deltaUnit(u) })}<input class="step-kg" type="number" inputmode="decimal" step="0.1" min="20" value="${kg != null ? disp(kg, u).toFixed(1) : ''}"></label>
+    <label class="f">${t('steps.date')}<input class="step-date" type="date" value="${date ?? ''}"></label>
+    <button type="button" class="btn ghost small-btn step-remove" aria-label="${esc(t('steps.remove'))}">×</button>
+  </div>`;
+}
+
+/** Weights to reach on the way to the goal, edited with the rest of the form and saved with it. */
+function stepsEditor(p: Profile): string {
+  const shown = p.entries.length ? orderedSteps(p.goalSteps, [...p.entries].sort((a, b) => (a.date < b.date ? -1 : 1))[0].kg, p.goalKg) : p.goalSteps;
+  const extra = p.goalSteps.filter(s => !shown.includes(s)); // not on the way to the current goal: still shown, so they can be fixed or removed
+  return `<div class="steps-edit">
+    <h3 class="sub-h">${t('steps.title')}</h3>
+    <p class="note flush">${t('steps.text')}</p>
+    <div id="stepRows">${[...shown, ...extra].map(s => stepRow(s.kg, s.date)).join('')}</div>
+    <div class="actions start"><button type="button" class="btn small-btn" id="addStep">${t('steps.add')}</button><button type="button" class="btn ghost small-btn" id="suggestStepsBtn">${t('steps.suggest')}</button></div>
+    <p class="note flush" id="stepsNote" hidden></p>
+  </div>`;
+}
+
 function readProfileForm(p: Profile): void {
   const u = unit();
   const num = (id: string): number | null => { const el = $<HTMLInputElement>('#' + id); if (!el || el.value === '') return null; const v = parseFloat(el.value); return isNaN(v) ? null : v; };
@@ -97,6 +122,12 @@ function readProfileForm(p: Profile): void {
   const g = num('pGoal');
   p.goalKg = g == null ? null : +fromDisp(g, u).toFixed(2);
   p.goalDate = $<HTMLInputElement>('#pGoalDate').value || null;
+  p.goalSteps = [...document.querySelectorAll<HTMLElement>('#stepRows .step-row')].flatMap(row => {
+    const v = parseFloat(row.querySelector<HTMLInputElement>('.step-kg')!.value);
+    const kg = isFinite(v) ? +fromDisp(v, u).toFixed(2) : NaN;
+    if (!(kg >= 20 && kg <= 400)) return [];
+    return [{ id: newId('st_'), kg, date: row.querySelector<HTMLInputElement>('.step-date')!.value || null }];
+  });
   p.updatedAt = Date.now();
 }
 
@@ -259,6 +290,21 @@ export function bindProfile(): void {
     note.textContent = t('profile.suggestNote', { weeks, date: fmtDate(addDays(todayISO(), weeks * 7), { day: 'numeric', month: 'long', year: 'numeric' }) });
   });
 
+  $('#addStep').addEventListener('click', () => {
+    $('#stepRows').insertAdjacentHTML('beforeend', stepRow(null, null));
+    $('#stepRows').querySelector<HTMLInputElement>('.step-row:last-child .step-kg')!.focus();
+  });
+  $('#stepRows').addEventListener('click', ev => (ev.target as Element).closest('.step-remove')?.closest('.step-row')?.remove());
+  $('#suggestStepsBtn').addEventListener('click', () => {
+    const note = $('#stepsNote');
+    const g = parseFloat($<HTMLInputElement>('#pGoal').value);
+    const start = [...p.entries].sort((a, b) => (a.date < b.date ? -1 : 1))[0]?.kg;
+    if (!isFinite(g) || start == null) { note.hidden = false; note.textContent = t('steps.suggestNeed'); return; }
+    const kgs = suggestSteps(start, fromDisp(g, unit()), unit());
+    $('#stepRows').innerHTML = kgs.map(kg => stepRow(kg, null)).join('');
+    note.hidden = false;
+    note.textContent = kgs.length ? t('steps.suggested') : t('steps.suggestNone');
+  });
   $('#delProfile').addEventListener('click', ev => {
     armOrRun(ev.currentTarget as HTMLButtonElement, t('profile.deleteConfirm', { name: p.name }), () => {
       const at = app.data.profiles.indexOf(p);

@@ -4,6 +4,9 @@ import { expect, test, type Page } from './fixtures';
 // headless browser, so it's replaced by a folder in the browser's private
 // storage (OPFS), which works the same way for writing and listing files.
 
+// Saving to a folder exists only in Chrome and Edge; Safari and Firefox say so instead.
+test.skip(({ browserName }) => browserName !== 'chromium', 'only Chrome and Edge can save to a folder');
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker =

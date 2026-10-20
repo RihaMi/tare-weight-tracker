@@ -17,6 +17,8 @@ export default defineConfig({
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
     { name: 'phone', use: { ...devices['Pixel 7'] } },
+    // Safari's engine at iPhone size: most people on iPhone use Tare in Safari or from the Home Screen.
+    { name: 'iphone', use: { ...devices['iPhone 15'] } },
   ],
   webServer: {
     command: 'npm run preview -- --port 4173 --strictPort',

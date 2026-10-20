@@ -6,6 +6,7 @@ import { expect, test, type Page } from './fixtures';
 // "Update screenshots" workflow and compared only there (see README).
 
 test.skip(process.platform !== 'linux', 'reference screenshots are made and compared on Linux');
+test.skip(({ browserName }) => browserName !== 'chromium', 'references are made in Chromium');
 
 // Same day every run, so the example data, dates and "today" look the same.
 const FIXED_NOW = new Date('2026-10-20T09:00:00');

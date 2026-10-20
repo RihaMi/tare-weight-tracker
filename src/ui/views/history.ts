@@ -6,6 +6,7 @@ import { fmtDelta, fmtW } from '../../lib/units';
 import { esc } from '../dom';
 import { t, type Key } from '../../i18n';
 import { milestonesCard, patternsCard, weeklyCard } from './insights';
+import { eventsCard } from './events';
 
 let showAllWeeks = false;
 export const toggleWeeks = (): void => { showAllWeeks = !showAllWeeks; };
@@ -25,7 +26,7 @@ export function historyView(): string {
     months[months.length - 1].items.push(x);
   }
 
-  const insights = weeklyCard(r, showAllWeeks) + '<div class="col">' + milestonesCard(profile(), r) + patternsCard(r) + '</div>';
+  const insights = weeklyCard(r, showAllWeeks) + '<div class="col">' + milestonesCard(profile(), r) + eventsCard(profile(), r) + patternsCard(r) + '</div>';
   return `${insights ? `<div class="grid-2 even">${insights}</div>` : ''}<section class="card">
     <div class="card-head"><h2>${t('history.title')}</h2>
       <div class="key"><span><i class="dot good"></i>${qText('good')}</span><span><i class="dot warn"></i>${qText('warn')}</span><span><i class="dot bad"></i>${qText('bad')}</span></div></div>

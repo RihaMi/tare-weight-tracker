@@ -14,7 +14,8 @@ test('the chart can be explored with the arrow keys', async ({ page }) => {
   await page.keyboard.press('ArrowLeft');
   await expect(tip).not.toHaveText(last);
   // Each step is read out in full for screen readers.
-  await expect(chart.locator('[aria-live]')).toHaveText(/^\w+day, \w+ \d+: \d+\.\d kg, trend \d+\.\d kg$/);
+  // …followed by any event going on that day (the example profile's morning runs).
+  await expect(chart.locator('[aria-live]')).toHaveText(/^\w+day, \w+ \d+: \d+\.\d kg, trend \d+\.\d kg\. Morning runs$/);
   await page.keyboard.press('Home');
   await page.keyboard.press('ArrowLeft'); // stays on the first one
   await expect(chart.locator('[aria-live]')).toContainText(/\d+\.\d kg/);

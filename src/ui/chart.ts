@@ -1,6 +1,8 @@
 import type { Profile, Unit } from '../data/schema';
 import { calc } from '../lib/calc';
 import { goalDateRange } from '../lib/forecast';
+import { eventsOn } from '../lib/events';
+import { esc } from './dom';
 import { DAY, addDays, fmtDate, iso, toD, todayISO } from '../lib/dates';
 import { disp, fmtDelta, fmtW } from '../lib/units';
 import { $ } from './dom';
@@ -94,11 +96,25 @@ export function drawChart(box: HTMLElement, p: Profile, u: Unit, range: number, 
       + `<text class="cone-t" x="${x(cone.to).toFixed(1)}" y="${ly}" text-anchor="end">${t('chart.likely')}</text>`;
   }
 
+  // Events in view: a light band over their days and a line where each starts, with a short label.
+  // One that's still going is shaded up to the latest weigh-in, not into the forecast.
+  const firstDay = E[0].date, lastDay = E[E.length - 1].date;
+  const shownEvents = p.events.filter(ev => ev.start <= lastDay && (ev.end ?? lastDay) >= firstDay);
+  const evSvg = shownEvents.map((ev, i) => {
+    const from = ev.start < firstDay ? firstDay : ev.start, to = (ev.end ?? lastDay) > lastDay ? lastDay : (ev.end ?? lastDay);
+    const x0 = x(from), x1 = Math.max(x0 + 3, x(to) + (ev.end ? 2 : 0));
+    const starts = ev.start >= firstDay;
+    const short = ev.label.length > 18 ? ev.label.slice(0, 17) + '…' : ev.label;
+    return `<g class="ev k-${ev.kind}"><rect class="ev-band" x="${x0.toFixed(1)}" y="${T}" width="${(x1 - x0).toFixed(1)}" height="${H - T - B}"/>`
+      + (starts ? `<line class="ev-line" x1="${x0.toFixed(1)}" x2="${x0.toFixed(1)}" y1="${T}" y2="${H - B}"/>` : '')
+      + `<text class="ev-t" x="${(x0 + 4).toFixed(1)}" y="${T + 11 + (i % 2) * 12}">${esc(short)}</text></g>`;
+  }).join('');
+
   box.tabIndex = 0;
   box.setAttribute('role', 'group');
   box.setAttribute('aria-label', t('chart.keys', { from: fmtDate(E[0].date), to: fmtDate(E[E.length - 1].date) }));
   box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
-    ${g}<path class="area" d="${area}"/>${goalLine}${coneSvg}${dots}<path class="trend" d="${tl}"/>
+    ${g}${evSvg}<path class="area" d="${area}"/>${goalLine}${coneSvg}${dots}<path class="trend" d="${tl}"/>
     <circle class="end" cx="${x(le.date)}" cy="${y(disp(le.kg, u))}" r="5.5"/>
     <line class="hov" x1="0" x2="0" y1="${T}" y2="${H - B}" visibility="hidden"/>
     <rect class="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/>
@@ -114,11 +130,12 @@ export function drawChart(box: HTMLElement, p: Profile, u: Unit, range: number, 
     hov.setAttribute('x1', String(cx)); hov.setAttribute('x2', String(cx)); hov.setAttribute('visibility', 'visible');
     const day = fmtDate(e.date, { weekday: 'short', day: 'numeric', month: 'short' }), trendW = t('chart.tipTrend', { w: fmtW(trendByDate.get(e.date)!, u) });
     tip.hidden = false;
-    tip.innerHTML = `${day}<br><b>${fmtW(e.kg, u)}</b> · ${trendW}`;
+    const during = eventsOn(p.events, e.date).map(ev => ev.label);
+    tip.innerHTML = `${day}<br><b>${fmtW(e.kg, u)}</b> · ${trendW}${during.map(l => `<br><span class="tip-ev">${esc(l)}</span>`).join('')}`;
     const sx = (cx * rect.width) / W, sy = (y(disp(e.kg, u)) * rect.height) / H;
     tip.style.left = Math.min(rect.width - 80, Math.max(80, sx)) + 'px';
     tip.style.top = Math.max(50, sy - 8) + 'px';
-    if (announce) live.textContent = `${fmtDate(e.date, { weekday: 'long', day: 'numeric', month: 'long' })}: ${fmtW(e.kg, u)}, ${trendW}`;
+    if (announce) live.textContent = `${fmtDate(e.date, { weekday: 'long', day: 'numeric', month: 'long' })}: ${fmtW(e.kg, u)}, ${trendW}${during.length ? '. ' + during.join(', ') : ''}`;
   };
   const hide = () => { hov.setAttribute('visibility', 'hidden'); tip.hidden = true; };
   const move = (ev: PointerEvent) => {

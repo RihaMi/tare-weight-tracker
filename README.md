@@ -89,6 +89,18 @@ On every pull request, GitHub Actions runs the unit tests, the browser tests and
 - Every weigh-in has an id and an `updatedAt` time, which a future sync would need to merge devices.
 - With a PIN, `createSaver` encrypts before saving (`src/lib/crypto.ts`) and `loadData` returns the encrypted envelope as `locked`; the lock screen decrypts it. Decrypting is the PIN check, so a wrong PIN can never produce data.
 
+## Using Tare on two devices
+
+There's no account or server, so each device keeps its own data. To bring them together, download a backup on one (or let automatic backups save it to a OneDrive, Google Drive or Dropbox folder), then on the other choose **Restore from backup…** and **Merge into what's here**:
+
+- **New things are added:** profiles, weigh-ins and events that aren't on this device yet.
+- **The newer copy wins** where both have the same thing (a weigh-in on the same date, the same event, a profile's details).
+- **Nothing is deleted.** Something removed on this device but still in the backup comes back, so delete it again after merging.
+- **This device keeps** its settings, PIN and language.
+- **Undo** takes a merge back for a few seconds afterwards.
+
+Live sync between devices is discussed in issue #19.
+
 ## Logging a weight from a link
 
 Opening Tare with `?log=` fills in the entry form; one tap on **Save** logs it. Nothing is saved without that tap, and the link is removed from the address bar afterwards.

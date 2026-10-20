@@ -21,6 +21,7 @@ import { resetCalories } from './calories';
 import { activityKey } from './overview';
 import { bindSettings, settingsCard } from './settings';
 import { commitWithUndo } from '../undo';
+import { changedAnything, mergeBackup } from '../../data/merge';
 import { applyTheme } from '../theme';
 
 /** A backup picked to restore: its data, or an encrypted backup still waiting for its PIN. */
@@ -154,7 +155,20 @@ function showRestoreConfirm(): void {
   const pending = pendingRestore;
   box.innerHTML = `<div class="warnbox">
     <p class="flush">${t('backup.confirm', { file: esc(pending.name), ...counts(pending.data) })}</p>
-    <div class="actions start"><button type="button" class="btn danger armed btn-wrap" id="restoreGo">${t('backup.replace')}</button><button type="button" class="btn" id="restoreCancel">${t('common.cancel')}</button></div></div>`;
+    <div class="actions start"><button type="button" class="btn primary btn-wrap" id="restoreMerge">${t('backup.merge')}</button><button type="button" class="btn danger armed btn-wrap" id="restoreGo">${t('backup.replace')}</button><button type="button" class="btn" id="restoreCancel">${t('common.cancel')}</button></div></div>`;
+  $('#restoreMerge').addEventListener('click', () => {
+    const before = structuredClone(app.data);
+    const { data, counts } = mergeBackup(app.data, pending.data);
+    pendingRestore = null;
+    if (!changedAnything(counts)) { showRestoreConfirm(); toast(t('backup.nothingNew')); return; }
+    app.data = data;
+    resetCalories();
+    commitWithUndo(t('backup.merged', { added: counts.profiles + counts.entries + counts.events, updated: counts.updated }), () => {
+      app.data = before;
+      resetCalories();
+      return true;
+    });
+  });
   $('#restoreGo').addEventListener('click', () => {
     app.data = restoredData(pending.data, app.data); pendingRestore = null; resetCalories();
     app.applyLanguage();

@@ -209,9 +209,16 @@ function setupAutoLock(): void {
       lockNow();
     }
   });
+  let awaySince: number | null = null; // set only once the page has actually been hidden
   document.addEventListener('visibilitychange', () => {
-    // Coming back after a while: refresh the reminder banner and badge.
-    if (!document.hidden && !isLocked() && !$<HTMLDialogElement>('#entryDlg').open) { render(); maybeQuickLog(); }
+    if (document.hidden) { awaySince = Date.now(); return; }
+    const away = awaySince == null ? 0 : Date.now() - awaySince;
+    awaySince = null;
+    // Coming back: refresh the reminder banner and badge. Quick log only after a real break
+    // (5 minutes or more), not on return from a download or share sheet a moment later.
+    if (isLocked() || $<HTMLDialogElement>('#entryDlg').open) return;
+    render();
+    if (away >= 5 * 60_000) maybeQuickLog();
   });
 }
 

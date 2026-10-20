@@ -207,6 +207,10 @@ main { padding-top: 20px; display: grid; gap: 16px; }
 .chart-box .trend { fill: none; stroke: var(--accent); stroke-width: 2.6; stroke-linejoin: round; stroke-linecap: round; }
 .chart-box .area { fill: var(--accent-soft); stroke: none; }
 .chart-box .goal { stroke: var(--good); stroke-width: 1.5; stroke-dasharray: 5 5; }
+.chart-box .cone { fill: var(--good); opacity: .1; }
+.chart-box .cone-band { stroke: var(--good-fill); stroke-width: 5; stroke-linecap: round; opacity: .55; }
+.chart-box .cone-mid { fill: var(--good-fill); }
+.chart-box .cone-t { fill: var(--good); font-family: var(--f-body); font-size: .68rem; font-weight: 600; }
 .chart-box .goal-t { fill: var(--good); font-family: var(--f-mono); font-size: .66rem; font-weight: 600; }
 .chart-box .end { fill: var(--accent); stroke: var(--surface); stroke-width: 3; }
 .chart-box .hov { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 2 3; }

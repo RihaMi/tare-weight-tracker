@@ -3,7 +3,7 @@ import type { Theme } from '../data/schema';
 // Light / dark appearance. 'auto' leaves it to the device (prefers-color-scheme);
 // 'light' and 'dark' set data-theme on <html>, which the stylesheet checks.
 
-/** Also read by a tiny inline script in index.html, so the right theme shows before the app loads. */
+/** Also read by public/theme.js, so the right theme shows before the app loads. */
 export const THEME_KEY = 'tare.theme';
 const PAGE_BG = { light: '#EDF0EF', dark: '#0B100F' } as const;
 

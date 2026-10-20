@@ -82,6 +82,23 @@ On every pull request, GitHub Actions runs the unit tests, the browser tests and
 - The saved format has a version number (`SCHEMA_VERSION` in `src/data/schema.ts`). When the format changes, `migrate()` upgrades older data and backup files. Data from the original single-file version of Tare is picked up automatically.
 - Every weigh-in has an id and an `updatedAt` time, which a future sync would need to merge devices.
 
+## Putting it online
+
+Tare is a static site: `npm run build` produces `dist/`, which any static host can serve. It needs HTTPS for the app install, offline mode and the icon shortcut to work, so test those on a real phone only once it's hosted.
+
+**Cloudflare Pages (free, works with a private repository)**
+
+1. Sign in at [dash.cloudflare.com](https://dash.cloudflare.com) and open **Workers & Pages → Create → Pages → Connect to Git**.
+2. Allow access to this repository only, then pick it.
+3. Build settings: framework preset **None**, build command `npm run build`, output directory `dist`. Under environment variables, add `NODE_VERSION` = `24`.
+4. **Save and Deploy.** The site gets an address like `https://tare-weight-tracker.pages.dev`. Every merge into `main` updates it, and every pull request gets its own preview address.
+
+Netlify works the same way: **Add new site → Import an existing project**, with the same build command and `dist` as the publish directory.
+
+Both hosts read `public/_headers`. It sets security headers (no framing, no referrer, no camera or location access) and caching: the built files are kept for a year, while the page and service worker are always checked for a new version. The build also adds a content security policy to the page (`vite.config.ts`). The page may load only its own files and Google Fonts, and inline scripts are blocked.
+
+Anyone with the address can open the site, but each person's data stays in their own browser. Nothing is sent to the host.
+
 ## Privacy
 
 Entries are stored only in your browser on your device. Clearing browser data deletes them, so use **Profile & goal → Download backup** now and then.

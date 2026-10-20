@@ -3,7 +3,7 @@ import type { Profile, Unit } from '../../data/schema';
 import { t, tn, type Key } from '../../i18n';
 import type { Stats } from '../../lib/calc';
 import { fmtDate, todayISO } from '../../lib/dates';
-import { milestoneStepKg, milestones, streaks, weeklyAverages, weekStart, type Milestone, type NextMilestone } from '../../lib/insights';
+import { milestoneStepKg, milestones, plateau, streaks, weekdayPattern, weeklyAverages, weekStart, type Milestone, type NextMilestone } from '../../lib/insights';
 import { LB, fmtDelta, fmtW } from '../../lib/units';
 
 /** A milestone amount in the unit people think in: 5 kg, 10 lb, 1 st. */
@@ -64,8 +64,52 @@ export function thisWeekCard(p: Profile, r: Stats): string {
       <div class="ms-bar"><span style="width:${(nextFraction(next, p, r, u) * 100).toFixed(1)}%"></span></div>
     </div>` : ''}
     ${recent.length ? `<ul class="ms-list compact">${recent.map(m => msItem(m, r.dir, u, fmtDate(m.date))).join('')}</ul>` : ''}
+    ${plateauNote(r, true)}
   </section>`;
 }
+
+/** A plateau only matters while working toward a goal; holding steady at goal is the point. */
+function plateauNote(r: Stats, short: boolean): string {
+  if (!r.hasGoal || r.reached) return '';
+  const pl = plateau(r.E);
+  if (!pl) return '';
+  if (short) return '<p class="note plateau-note"><span class="pill warn">' + t('plateau.short', { n: pl.days }) + '</span> <a href="#history">' + t('patterns.title') + '</a></p>';
+  return '<div class="plateau"><h3>' + t('plateau.title') + '</h3>'
+    + '<p class="flush">' + t('plateau.text', { n: pl.days, date: fmtDate(pl.since, { day: 'numeric', month: 'long' }) }) + '</p>'
+    + '<p class="note">' + t(r.dir < 0 ? 'plateau.whyLose' : 'plateau.whyGain') + '</p></div>';
+}
+
+/** Weekday names in the current language, Monday first (5 January 2026 was a Monday). */
+const weekdayName = (d: number, style: 'long' | 'short'): string => fmtDate('2026-01-0' + (5 + d), { weekday: style });
+
+export function patternsCard(r: Stats): string {
+  const u = unit();
+  if (r.E.length < 2) return '';
+  const w = weekdayPattern(r.E);
+  let weekday: string;
+  if (!w) {
+    weekday = '<p class="note flush">' + t('patterns.weekdayWait') + '</p>';
+  } else {
+    const max = Math.max(...w.byDay.map(v => Math.abs(v ?? 0)), 0.2);
+    const bars = w.byDay.map((v, d) => {
+      const h = v == null ? 0 : (Math.abs(v) / max) * 50;
+      const cls = (v == null ? 'none' : v >= 0 ? 'up' : 'down') + (d === w.heaviest || d === w.lightest ? ' mark' : '');
+      const label = v == null ? '–' : fmtDelta(v, u);
+      return '<div class="wd ' + cls + '" title="' + weekdayName(d, 'long') + ': ' + label + '">'
+        + '<div class="wd-plot"><span style="height:' + h.toFixed(1) + '%"></span></div>'
+        + '<span class="wd-day">' + weekdayName(d, 'short') + '</span></div>';
+    }).join('');
+    const text = w.spread >= 0.3
+      ? t('patterns.weekdayText', { diff: fmtW(w.spread, u), heavy: weekdayName(w.heaviest, 'long'), light: weekdayName(w.lightest, 'long') })
+      : t('patterns.weekdaySteady');
+    weekday = '<div class="wd-chart" role="img" aria-label="' + t('patterns.weekdayAria') + '">' + bars + '</div>'
+      + '<p class="muted small flush">' + t('patterns.vsTrend') + '</p><p class="note">' + text + '</p>';
+  }
+  return '<section class="card"><div class="card-head"><h2>' + t('patterns.title') + '</h2></div>'
+    + plateauNote(r, false)
+    + '<h3 class="sub-h flush-top">' + t('patterns.weekday') + '</h3>' + weekday + '</section>';
+}
+
 
 const WEEKS_SHOWN = 8;
 

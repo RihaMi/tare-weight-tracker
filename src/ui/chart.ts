@@ -1,5 +1,6 @@
 import type { Profile, Unit } from '../data/schema';
 import { calc } from '../lib/calc';
+import { goalDateRange } from '../lib/forecast';
 import { DAY, addDays, fmtDate, iso, toD } from '../lib/dates';
 import { disp, fmtW } from '../lib/units';
 import { $ } from './dom';
@@ -34,7 +35,12 @@ export function drawChart(box: HTMLElement, p: Profile, u: Unit, range: number):
   const step = niceStep(hi - lo, 5);
   lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
 
-  const d0 = toD(E[0].date).getTime(), d1 = toD(E[E.length - 1].date).getTime();
+  const d0 = toD(E[0].date).getTime(), dLast = toD(E[E.length - 1].date).getTime();
+  // Where the goal is likely to be reached. Drawn only when it fits without squeezing
+  // the weigh-ins into less than half the width.
+  const likely = showGoal && !r.reached ? goalDateRange(r.E, p.goalKg!) : null;
+  const cone = likely && toD(likely.to).getTime() - dLast <= Math.max(DAY, dLast - d0) ? likely : null;
+  const d1 = cone ? toD(cone.to).getTime() : dLast;
   const x = (s: string) => L + ((toD(s).getTime() - d0) / Math.max(DAY, d1 - d0)) * (W - L - R);
   const y = (v: number) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
 
@@ -53,13 +59,24 @@ export function drawChart(box: HTMLElement, p: Profile, u: Unit, range: number):
   const tl = trend.map((pt, i) => `${i ? 'L' : 'M'}${x(pt.date).toFixed(1)},${y(disp(pt.kg, u)).toFixed(1)}`).join('');
   const area = `${tl}L${x(trend[trend.length - 1].date).toFixed(1)},${H - B}L${x(trend[0].date).toFixed(1)},${H - B}Z`;
   const dots = E.length <= 160 ? E.map(e => `<circle class="raw" cx="${x(e.date).toFixed(1)}" cy="${y(disp(e.kg, u)).toFixed(1)}" r="2.6"/>`).join('') : '';
+  // With a cone at the right end, the goal's label moves to the left so they don't overlap.
   const goalLine = showGoal
-    ? `<line class="goal" x1="${L}" x2="${W - R}" y1="${y(goalV!)}" y2="${y(goalV!)}"/><text class="goal-t" x="${W - R}" y="${y(goalV!) - 6}" text-anchor="end">${t('chart.goal', { v: fmtNum(goalV!) })}</text>`
+    ? `<line class="goal" x1="${L}" x2="${W - R}" y1="${y(goalV!)}" y2="${y(goalV!)}"/><text class="goal-t" x="${cone ? L + 4 : W - R}" y="${y(goalV!) - 6}" text-anchor="${cone ? 'start' : 'end'}">${t('chart.goal', { v: fmtNum(goalV!) })}</text>`
     : '';
   const le = trend[trend.length - 1];
+  let coneSvg = '';
+  if (cone) {
+    const gy = y(goalV!), ex = x(le.date), ey = y(disp(le.kg, u));
+    // The label goes on the far side of the goal line from the cone.
+    const ly = ey < gy ? gy + 16 : gy - 9;
+    coneSvg = `<path class="cone" d="M${ex.toFixed(1)},${ey.toFixed(1)}L${x(cone.from).toFixed(1)},${gy.toFixed(1)}L${x(cone.to).toFixed(1)},${gy.toFixed(1)}Z"/>`
+      + `<line class="cone-band" x1="${x(cone.from).toFixed(1)}" x2="${x(cone.to).toFixed(1)}" y1="${gy}" y2="${gy}"/>`
+      + `<circle class="cone-mid" cx="${x(cone.mid).toFixed(1)}" cy="${gy}" r="3.5"/>`
+      + `<text class="cone-t" x="${x(cone.to).toFixed(1)}" y="${ly}" text-anchor="end">${t('chart.likely')}</text>`;
+  }
 
   box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${t('chart.aria', { from: fmtDate(E[0].date), to: fmtDate(E[E.length - 1].date) })}">
-    ${g}<path class="area" d="${area}"/>${goalLine}${dots}<path class="trend" d="${tl}"/>
+    ${g}<path class="area" d="${area}"/>${goalLine}${coneSvg}${dots}<path class="trend" d="${tl}"/>
     <circle class="end" cx="${x(le.date)}" cy="${y(disp(le.kg, u))}" r="5.5"/>
     <line class="hov" x1="0" x2="0" y1="${T}" y2="${H - B}" visibility="hidden"/>
     <rect class="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/>

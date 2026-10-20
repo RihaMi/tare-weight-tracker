@@ -3,7 +3,8 @@ import type { Profile } from '../../data/schema';
 import { t, tn, type Key } from '../../i18n';
 import { BMI_CATS, bmiCategory, calc, paceState, type Stats } from '../../lib/calc';
 import { roundKcal } from '../../lib/calories';
-import { fmtDate } from '../../lib/dates';
+import { fmtDate, todayISO } from '../../lib/dates';
+import { goalDateRange } from '../../lib/forecast';
 import { fmtInt, fmtNum } from '../../lib/format';
 import { deltaUnit, disp, fmtDelta, fmtW, splitStone } from '../../lib/units';
 import { esc } from '../dom';
@@ -47,8 +48,16 @@ function chartCard(r: Stats): string {
   </section>`;
 }
 
+/** "10 Dec – 20 Jan", with years only when it isn't all this year. */
+function dateRange(from: string, to: string): string {
+  const year = todayISO().slice(0, 4);
+  const o: Intl.DateTimeFormatOptions = from.startsWith(year) && to.startsWith(year) ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' };
+  return `${fmtDate(from, o)} – ${fmtDate(to, o)}`;
+}
+
 function statsCard(p: Profile, r: Stats): string {
   const u = unit(), wk = r.perDay! * 7;
+  const likely = r.hasGoal && !r.reached ? goalDateRange(r.E, p.goalKg!) : null;
   const toward = (v: number) => (r.dir * v > 0.0005 ? 'good' : r.dir * v < -0.0005 ? 'bad' : '');
   const longDate = (s: string) => fmtDate(s, { day: 'numeric', month: 'short', year: 'numeric' });
   const stats: Array<[Key, string, string]> = [
@@ -56,7 +65,7 @@ function statsCard(p: Profile, r: Stats): string {
     ['stats.left', r.hasGoal ? (r.reached ? t('stats.done') : fmtW(Math.abs(r.remaining!), u)) : '—', ''],
     ['stats.perDay', fmtDelta(r.perDay!, u, 2), toward(r.perDay!)],
     ['stats.perWeek', fmtDelta(wk, u), toward(wk)],
-    ['stats.eta', r.reached ? t('stats.reached') : r.eta ? longDate(r.eta) : '—', ''],
+    likely ? ['stats.etaRange', dateRange(likely.from, likely.to), ''] : ['stats.eta', r.reached ? t('stats.reached') : r.eta ? longDate(r.eta) : '—', ''],
     ['stats.need', r.needPerDay != null ? fmtDelta(r.needPerDay * 7, u) : '—', ''],
     ['stats.count', tn('stats.countValue', r.days!, { n: r.E.length, d: r.days! }), ''],
     ['stats.daysLeft', r.daysLeft != null ? (r.daysLeft >= 0 ? String(r.daysLeft) : t('stats.passed')) : '—', ''],

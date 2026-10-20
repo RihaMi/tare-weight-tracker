@@ -96,13 +96,17 @@ Tare is a static site: `npm run build` produces `dist/`, which any static host c
 
 Netlify works the same way: **Add new site → Import an existing project**, with the same build command and `dist` as the publish directory.
 
-Both hosts read `public/_headers`. It sets security headers (no framing, no referrer, no camera or location access) and caching: the built files are kept for a year, while the page and service worker are always checked for a new version. The build also adds a content security policy to the page (`vite.config.ts`). The page may load only its own files and Google Fonts, and inline scripts are blocked.
+Both hosts read `public/_headers`. It sets security headers (no framing, no referrer, no camera or location access) and caching: the built files are kept for a year, while the page and service worker are always checked for a new version. The build also adds a content security policy to the page (`vite.config.ts`). The page may load only its own files, and inline scripts are blocked.
 
 Anyone with the address can open the site, but each person's data stays in their own browser. Nothing is sent to the host.
 
 ## Privacy
 
-Entries are stored only in your browser on your device. Clearing browser data deletes them, so use **Profile & goal → Download backup** now and then.
+Tare makes no requests to other servers: no analytics, no ads, and the fonts are part of the app. Entries are stored only in your browser on your device. Clearing browser data deletes them, so use **Profile & goal → Download backup** now and then.
+
+## Fonts
+
+[Bricolage Grotesque](https://github.com/ateliertriay/bricolage), [Figtree](https://github.com/erikdkennedy/figtree) and [Azeret Mono](https://github.com/displaay/azeret), all under the SIL Open Font License 1.1, installed from [Fontsource](https://fontsource.org). Only the Latin and Latin Extended subsets are included (`src/fonts.css`).
 
 ## Disclaimer
 

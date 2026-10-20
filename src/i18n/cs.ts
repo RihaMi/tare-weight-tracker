@@ -56,7 +56,7 @@ export const cs: Record<Key, string | Plural> = {
   'sample.note64': 'Tento týden stagnace, ale vydržel jsem',
   'sample.note88': 'Narozeninová večeře',
   'sample.note110': 'Džíny už jsou volné',
-  'profile.defaultName': 'Já',
+  'profile.defaultName': 'Můj profil',
   'profile.newName': 'Nový profil',
   'profile.unnamed': 'Bez jména',
 

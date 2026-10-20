@@ -2,16 +2,16 @@
 import { defineConfig, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// What the built page may load: its own files, plus the Google Fonts stylesheet and
-// font files. No inline scripts and nothing sent anywhere else. Inline styles are
-// allowed because screens set widths (bars, markers) with style attributes.
+// What the built page may load: only its own files. No inline scripts and nothing
+// sent anywhere else. Inline styles are allowed because screens set widths (bars,
+// markers) with style attributes.
 const CSP = [
   "default-src 'self'",
   "script-src 'self'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self'",
   "img-src 'self' data: blob:",
-  "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
+  "connect-src 'self'",
   "worker-src 'self'",
   "manifest-src 'self'",
   "object-src 'none'",
@@ -55,14 +55,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png}'],
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',
-            handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'google-fonts', expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 } },
-          },
-        ],
+        // Fonts are precached too, so the app looks right offline from the first visit.
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
       },
     }),
   ],

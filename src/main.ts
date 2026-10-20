@@ -1,3 +1,4 @@
+import './fonts.css';
 import './styles.css';
 import { registerSW } from 'virtual:pwa-register';
 import { app, commit, go, isTab, profile, type Tab } from './app';
@@ -312,6 +313,8 @@ async function start(): Promise<void> {
   app.render = render;
   if (!data && !locked) void app.persist(app.data); // first run only: never write over encrypted data
   void navigator.storage?.persist?.();
+  // Fonts used to come from Google and were cached separately; they're part of the app now.
+  void globalThis.caches?.delete('google-fonts').catch(() => {});
   initEntryDialog();
   initLock();
   bindGlobalEvents();

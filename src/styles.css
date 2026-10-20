@@ -120,7 +120,7 @@ select.profile-sel {
 .btn.ghost { background: none; border-color: transparent; color: var(--muted); }
 .btn.ghost:hover { color: var(--ink); }
 .btn.danger { color: var(--bad); }
-.btn.danger.armed { background: var(--bad); color: #fff; border-color: var(--bad); }
+.btn.danger.armed { background: var(--bad); color: var(--surface); border-color: var(--bad); } /* white on dark red, or near-black on the lighter red of dark mode */
 .small-btn { padding: 5px 11px; font-size: .85rem; }
 .tabs { display: flex; gap: 4px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; }
 .tabs a { text-decoration: none; color: var(--muted); font-weight: 600; padding: 8px 12px 10px; border-bottom: 2px solid transparent; white-space: nowrap; }

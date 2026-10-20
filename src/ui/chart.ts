@@ -1,8 +1,8 @@
 import type { Profile, Unit } from '../data/schema';
 import { calc } from '../lib/calc';
 import { goalDateRange } from '../lib/forecast';
-import { DAY, addDays, fmtDate, iso, toD } from '../lib/dates';
-import { disp, fmtW } from '../lib/units';
+import { DAY, addDays, fmtDate, iso, toD, todayISO } from '../lib/dates';
+import { disp, fmtDelta, fmtW } from '../lib/units';
 import { $ } from './dom';
 import { trendSeries } from '../lib/insights';
 import { t } from '../i18n';
@@ -16,11 +16,30 @@ export function niceStep(span: number, target = 5): number {
 }
 
 
-export function drawChart(box: HTMLElement, p: Profile, u: Unit, range: number): void {
+/** The weigh-ins in the chart's range as a table, newest first: the chart's data for screen readers, or for anyone. */
+function tableHTML(E: Array<{ date: string; kg: number }>, trendByDate: Map<string, number>, u: Unit): string {
+  const year = todayISO().slice(0, 4); // the year only where it isn't this one, to keep the table narrow
+  const rows = E.map((e, i) => ({ e, prev: E[i - 1] })).reverse().map(({ e, prev }) =>
+    `<tr><td>${fmtDate(e.date, e.date.startsWith(year) ? { weekday: 'short', day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' })}</td><td class="num">${fmtW(e.kg, u)}</td>
+      <td class="num">${prev ? fmtDelta(e.kg - prev.kg, u) : '—'}</td><td class="num">${fmtW(trendByDate.get(e.date)!, u)}</td></tr>`).join('');
+  return `<table class="week-table"><thead><tr><th>${t('entry.date')}</th><th class="num">${t('chart.colWeight')}</th><th class="num">${t('weekly.change')}</th><th class="num">${t('chart.colTrend')}</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+/**
+ * Draws the weight chart into `box`, and the same weigh-ins as a table into
+ * `table` if given. The chart can be explored with the pointer, or with the
+ * arrow keys once it has focus; each weigh-in is then read out.
+ */
+export function drawChart(box: HTMLElement, p: Profile, u: Unit, range: number, table?: HTMLElement | null): void {
   const r = calc(p);
   let E = r.E;
   if (range && E.length) { const cut = addDays(E[E.length - 1].date, -range); E = E.filter(e => e.date >= cut); }
-  if (E.length < 2) { box.innerHTML = `<p class="note chart-empty">${t('chart.needTwo')}</p>`; return; }
+  if (E.length < 2) {
+    box.innerHTML = `<p class="note chart-empty">${t('chart.needTwo')}</p>`;
+    box.removeAttribute('tabindex'); box.removeAttribute('role'); box.removeAttribute('aria-label');
+    if (table) table.closest('details')!.hidden = true;
+    return;
+  }
 
   const trendAll = trendSeries(r.E);
   const trend = trendAll.filter(x => x.date >= E[0].date);
@@ -75,28 +94,53 @@ export function drawChart(box: HTMLElement, p: Profile, u: Unit, range: number):
       + `<text class="cone-t" x="${x(cone.to).toFixed(1)}" y="${ly}" text-anchor="end">${t('chart.likely')}</text>`;
   }
 
-  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${t('chart.aria', { from: fmtDate(E[0].date), to: fmtDate(E[E.length - 1].date) })}">
+  box.tabIndex = 0;
+  box.setAttribute('role', 'group');
+  box.setAttribute('aria-label', t('chart.keys', { from: fmtDate(E[0].date), to: fmtDate(E[E.length - 1].date) }));
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
     ${g}<path class="area" d="${area}"/>${goalLine}${coneSvg}${dots}<path class="trend" d="${tl}"/>
     <circle class="end" cx="${x(le.date)}" cy="${y(disp(le.kg, u))}" r="5.5"/>
     <line class="hov" x1="0" x2="0" y1="${T}" y2="${H - B}" visibility="hidden"/>
     <rect class="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/>
-  </svg><div class="tip" hidden></div>`;
+  </svg><div class="tip" hidden></div><p class="sr-only" aria-live="polite"></p>`;
 
-  const svg = $<SVGSVGElement>('svg', box), hit = $('.hit', box), hov = $('.hov', box), tip = $('.tip', box);
+  const svg = $<SVGSVGElement>('svg', box), hit = $('.hit', box), hov = $('.hov', box), tip = $('.tip', box), live = $('.sr-only', box);
   const trendByDate = new Map(trendAll.map(t => [t.date, t.kg]));
+  let shown = -1;
+  /** Marks weigh-in `i` with the line and tooltip; `announce` also reads it out (keyboard). */
+  const show = (i: number, announce = false) => {
+    shown = i;
+    const e = E[i], cx = x(e.date), rect = svg.getBoundingClientRect();
+    hov.setAttribute('x1', String(cx)); hov.setAttribute('x2', String(cx)); hov.setAttribute('visibility', 'visible');
+    const day = fmtDate(e.date, { weekday: 'short', day: 'numeric', month: 'short' }), trendW = t('chart.tipTrend', { w: fmtW(trendByDate.get(e.date)!, u) });
+    tip.hidden = false;
+    tip.innerHTML = `${day}<br><b>${fmtW(e.kg, u)}</b> · ${trendW}`;
+    const sx = (cx * rect.width) / W, sy = (y(disp(e.kg, u)) * rect.height) / H;
+    tip.style.left = Math.min(rect.width - 80, Math.max(80, sx)) + 'px';
+    tip.style.top = Math.max(50, sy - 8) + 'px';
+    if (announce) live.textContent = `${fmtDate(e.date, { weekday: 'long', day: 'numeric', month: 'long' })}: ${fmtW(e.kg, u)}, ${trendW}`;
+  };
+  const hide = () => { hov.setAttribute('visibility', 'hidden'); tip.hidden = true; };
   const move = (ev: PointerEvent) => {
     const rect = svg.getBoundingClientRect(), px = (ev.clientX - rect.left) * (W / rect.width);
     let best = 0, bd = Infinity;
     E.forEach((e, i) => { const dd = Math.abs(x(e.date) - px); if (dd < bd) { bd = dd; best = i; } });
-    const e = E[best], cx = x(e.date);
-    hov.setAttribute('x1', String(cx)); hov.setAttribute('x2', String(cx)); hov.setAttribute('visibility', 'visible');
-    tip.hidden = false;
-    tip.innerHTML = `${fmtDate(e.date, { weekday: 'short', day: 'numeric', month: 'short' })}<br><b>${fmtW(e.kg, u)}</b> · ${t('chart.tipTrend', { w: fmtW(trendByDate.get(e.date)!, u) })}`;
-    const sx = (cx * rect.width) / W, sy = (y(disp(e.kg, u)) * rect.height) / H;
-    tip.style.left = Math.min(rect.width - 80, Math.max(80, sx)) + 'px';
-    tip.style.top = Math.max(50, sy - 8) + 'px';
+    show(best);
   };
   hit.addEventListener('pointermove', move);
   hit.addEventListener('pointerdown', move);
-  hit.addEventListener('pointerleave', () => { hov.setAttribute('visibility', 'hidden'); tip.hidden = true; });
+  hit.addEventListener('pointerleave', () => { if (document.activeElement !== box) hide(); });
+  box.onkeydown = ev => {
+    const last = E.length - 1, at = shown < 0 ? last + 1 : shown;
+    const to = ({ ArrowLeft: at - 1, ArrowRight: at + 1, Home: 0, End: last } as Record<string, number>)[ev.key];
+    if (ev.key === 'Escape') { hide(); return; }
+    if (to == null) return;
+    ev.preventDefault();
+    show(Math.max(0, Math.min(last, to)), true);
+  };
+  box.onblur = hide;
+  if (table) {
+    table.innerHTML = tableHTML(E, trendByDate, u);
+    table.closest('details')!.hidden = false;
+  }
 }

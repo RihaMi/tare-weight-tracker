@@ -116,7 +116,9 @@ const WEEKS_SHOWN = 8;
 
 export function weeklyCard(r: Stats, showAll: boolean): string {
   const u = unit(), weeks = weeklyAverages(r.E);
-  if (weeks.length < 2) return '';
+  if (weeks.length < 2) {
+    return r.E.length ? `<section class="card"><div class="card-head"><h2>${t('weekly.title')}</h2></div><p class="note flush">${t('weekly.notYet')}</p></section>` : '';
+  }
   const list = showAll ? weeks : weeks.slice(0, WEEKS_SHOWN);
   const max = Math.max(...weeks.map(w => Math.abs(w.change ?? 0)), 0.1);
   return `<section class="card"><div class="card-head"><h2>${t('weekly.title')}</h2><span class="muted small">${t('weekly.sub')}</span></div>

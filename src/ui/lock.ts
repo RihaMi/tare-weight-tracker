@@ -16,16 +16,25 @@ function readFails(): Fails {
 }
 function writeFails(f: Fails): void { try { localStorage.setItem(FAILS_KEY, JSON.stringify(f)); } catch { /* best effort */ } }
 
+export interface LockOptions {
+  /** Number of PIN digits (dots shown). Defaults to the PIN saved in settings. */
+  length?: number;
+  /** Checks a PIN; defaults to the hash in settings. When data is encrypted, decrypting it is the check. */
+  verify?: (pin: string) => Promise<boolean>;
+}
+
 let entered = '';
 let busy = false;
 let onUnlock: (() => void) | null = null;
+let options: LockOptions = {};
 let countdown: number | undefined;
 
 export const isLocked = (): boolean => !$('#lock').hidden;
 
+const pinLength = (): number => options.length ?? app.data.settings.pin?.length ?? 4;
+
 function drawDots(): void {
-  const len = app.data.settings.pin?.length ?? 4;
-  $('#pinDots').innerHTML = Array.from({ length: len }, (_, i) => `<span class="${i < entered.length ? 'on' : ''}"></span>`).join('');
+  $('#pinDots').innerHTML = Array.from({ length: pinLength() }, (_, i) => `<span class="${i < entered.length ? 'on' : ''}"></span>`).join('');
 }
 
 function message(text: string, isError = false): void {
@@ -47,11 +56,17 @@ function showWait(): void {
   countdown = window.setInterval(tick, 1000);
 }
 
+const defaultVerify = async (pin: string): Promise<boolean> => {
+  const stored = app.data.settings.pin;
+  return !!stored && verifyPin(pin, stored);
+};
+
 async function check(): Promise<void> {
-  const pin = app.data.settings.pin;
-  if (!pin || busy) return;
+  if (busy) return;
   busy = true;
-  const ok = await verifyPin(entered, pin);
+  $('.lock-box').classList.add('busy');
+  const ok = await (options.verify ?? defaultVerify)(entered).catch(() => false);
+  $('.lock-box').classList.remove('busy');
   busy = false;
   if (ok) {
     writeFails({ n: 0, until: 0 });
@@ -72,7 +87,7 @@ async function check(): Promise<void> {
 
 function press(key: string): void {
   if (busy || waitingFor() > 0) return;
-  const len = app.data.settings.pin?.length ?? 4;
+  const len = pinLength();
   if (key === 'back') entered = entered.slice(0, -1);
   else if (/^\d$/.test(key) && entered.length < len) entered += key;
   drawDots();
@@ -83,13 +98,14 @@ function hideLock(): void {
   clearInterval(countdown);
   $('#lock').hidden = true;
   document.querySelector('.wrap')?.removeAttribute('inert');
-  const cb = onUnlock; onUnlock = null;
+  const cb = onUnlock; onUnlock = null; options = {};
   cb?.();
 }
 
 /** Shows the lock screen; `then` runs once the right PIN is entered. */
-export function showLock(then: () => void): void {
+export function showLock(then: () => void, opts: LockOptions = {}): void {
   onUnlock = then;
+  options = opts;
   entered = '';
   $('#forgotPanel').hidden = true;
   $('#keypad').hidden = false;
@@ -114,8 +130,9 @@ export function initLock(): void {
   $('#forgotCancel').addEventListener('click', () => { $('#forgotPanel').hidden = true; $('#keypad').hidden = false; });
   $('#forgotErase').addEventListener('click', ev => {
     armOrRun(ev.currentTarget as HTMLButtonElement, t('lock.eraseConfirm'), () => {
+      app.key = null;
       app.data = freshData([sampleProfile(undefined, app.sampleText())]);
-      void app.persist(app.data);
+      void app.persist(app.data); // no PIN and no key: saved unencrypted, replacing the encrypted copy
       writeFails({ n: 0, until: 0 });
       hideLock();
     });

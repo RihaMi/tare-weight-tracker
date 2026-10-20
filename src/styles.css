@@ -366,6 +366,7 @@ main { padding-top: 20px; display: grid; gap: 16px; }
 .keypad [data-key="back"] { font-size: 1.3rem; }
 .forgot { display: grid; gap: 12px; text-align: left; font-size: .92rem; }
 .forgot p { margin: 0; }
+.lock-box.busy .pin-dots { opacity: .5; }
 .shake { animation: shake .35s; }
 @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
 

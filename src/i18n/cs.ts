@@ -384,7 +384,7 @@ export const cs: Record<Key, string | Plural> = {
   'settings.pin': 'Zámek PIN',
   'settings.pinOn': 'Zapnutý. Tare při otevření chce váš {n}místný PIN.',
   'settings.pinOff': 'Vypnutý. Tare může otevřít kdokoli s tímto zařízením.',
-  'settings.pinNote': 'PIN brání ostatním aplikaci otevřít. Vaše data ale nešifruje.',
+  'settings.pinNote': 'S PINem jsou vaše data uložená zašifrovaně a otevřít je jde jen s ním. Stažené zálohy šifrované nejsou, proto je ukládejte na soukromé místo.',
   'settings.pinSet': 'Nastavit PIN',
   'settings.pinChange': 'Změnit PIN',
   'settings.pinTurnOff': 'Vypnout',

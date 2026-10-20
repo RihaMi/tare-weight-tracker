@@ -5,6 +5,7 @@ import { detectLang, t, type Key } from '../../i18n';
 import { addDays, todayISO } from '../../lib/dates';
 import { dailyReminderICS, isPastTime } from '../../lib/ics';
 import { hashPin, isValidPin, verifyPin } from '../../lib/pin';
+import { newKeyInfo } from '../../lib/crypto';
 import { badgeSupported, updateBadge } from '../badge';
 import { $, download, esc, toast } from '../dom';
 
@@ -102,7 +103,7 @@ async function submitPin(ev: SubmitEvent): Promise<void> {
   const s = app.data.settings;
   if (pinMode !== 'set' && !(s.pin && (await verifyPin(val('pinCur'), s.pin)))) { fail('settings.pinWrongCurrent'); return; }
   if (pinMode === 'remove') {
-    s.pin = null; pinMode = 'idle';
+    s.pin = null; app.key = null; pinMode = 'idle'; // saved unencrypted from now on
     commit(t('settings.pinTurnedOff'));
     return;
   }
@@ -110,6 +111,7 @@ async function submitPin(ev: SubmitEvent): Promise<void> {
   if (val('pinNew') !== val('pinRepeat')) { fail('settings.pinMismatch'); return; }
   const wasOn = !!s.pin;
   s.pin = await hashPin(val('pinNew'));
+  app.key = await newKeyInfo(val('pinNew')); // new salt: data is re-encrypted with the new PIN on save
   pinMode = 'idle';
   commit(t(wasOn ? 'settings.pinChanged' : 'settings.pinTurnedOn'));
 }

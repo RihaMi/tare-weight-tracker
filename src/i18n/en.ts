@@ -386,7 +386,7 @@ export const en = {
   'settings.pin': 'PIN lock',
   'settings.pinOn': 'On. Tare asks for your {n}-digit PIN when it opens.',
   'settings.pinOff': 'Off. Anyone with this device can open Tare.',
-  'settings.pinNote': "The PIN keeps people out of the app. It doesn't encrypt your data.",
+  'settings.pinNote': 'With a PIN, your data is stored encrypted and can only be opened with it. Backup files you download are not encrypted, so keep them somewhere private.',
   'settings.pinSet': 'Set a PIN',
   'settings.pinChange': 'Change PIN',
   'settings.pinTurnOff': 'Turn off',

@@ -18,6 +18,10 @@ It was inspired by the iOS app *Monitor Your Weight* and rebuilt with a cleaner,
 - **Body measurements.** Waist, hips, chest, neck, upper arm and thigh, with trend lines and waist-to-height ratio.
 - **History.** Every weigh-in by month. A colored dot shows whether that day was on pace (green), slower (amber) or moved away from the goal (red).
 - **Motivation.** Weekly averages that smooth out water swings, daily and weekly logging streaks, and milestones (every 5 kg / 10 lb / 1 st, 25/50/75 % of the goal, reaching the goal, moving into a better BMI category). Logging a weight that reaches a milestone says so.
+- **Patterns.** Spots plateaus (the trend flat for two weeks or more) and which days of the week you tend to weigh more, and explains both.
+- **Quick log.** If you haven't weighed in today, the log form opens by itself when you open Tare (once a day; can be turned off). On an installed app, long-press the icon and choose **Log weight**.
+- **Safe with several windows.** Tabs and the installed app stay in sync, so one window can't undo changes made in another.
+- **Backup reminder.** A reminder two weeks after you start logging, and again whenever your last backup is 30 days old.
 - **PIN lock.** An optional 4–6 digit PIN, with auto-lock after the app has been in the background. Only a salted hash is stored. It keeps people out of the app but doesn't encrypt the data.
 - **Daily reminder.** A reminder inside the app if you haven't weighed in by your chosen time, plus a calendar file (.ics) with a daily alert for your phone.
 - **App icon badge.** On an installed app, the icon can show the weight left to your goal, or a dot until today's weigh-in.

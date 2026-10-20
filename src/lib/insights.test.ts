@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Entry } from '../data/schema';
-import { milestones, newMilestones, streaks, weekStart, weeklyAverages } from './insights';
+import { milestones, newMilestones, plateau, streaks, weekStart, weekdayPattern, weeklyAverages } from './insights';
 import { LB } from './units';
 
 const e = (date: string, kg: number): Entry => ({ id: date, date, kg, updatedAt: 0 });
@@ -89,5 +89,54 @@ describe('milestones', () => {
     const before = milestones({ entries: losing.slice(0, 3), goalKg: 80, heightCm: null, unit: 'kg' }).achieved;
     const after = milestones({ entries: losing.slice(0, 4), goalKg: 80, heightCm: null, unit: 'kg' }).achieved;
     expect(newMilestones(before, after).map(m => m.key)).toEqual(['w2', 'p50']);
+  });
+});
+
+describe('plateau', () => {
+  const day = (i: number) => new Date(Date.UTC(2026, 6, 1) + i * 864e5).toISOString().slice(0, 10);
+
+  it('finds two-plus weeks where the trend barely moved', () => {
+    const list: Entry[] = [];
+    for (let i = 0; i < 30; i++) list.push(e(day(i), 90 - i * 0.15));                 // losing
+    for (let i = 30; i < 52; i++) list.push(e(day(i), 85.5 + (i % 2 ? 0.2 : -0.2)));   // flat with noise
+    const p = plateau(list);
+    expect(p).not.toBeNull();
+    expect(p!.days).toBeGreaterThanOrEqual(14);
+    expect(p!.since >= day(30)).toBe(true);
+  });
+
+  it('ignores a steady loss and short flat spells', () => {
+    const losing = Array.from({ length: 40 }, (_, i) => e(day(i), 90 - i * 0.1));
+    expect(plateau(losing)).toBeNull();
+    const shortFlat = [...Array.from({ length: 30 }, (_, i) => e(day(i), 90 - i * 0.15)), ...Array.from({ length: 8 }, (_, i) => e(day(30 + i), 85.5))];
+    expect(plateau(shortFlat)).toBeNull();
+  });
+});
+
+describe('weekday pattern', () => {
+  const day = (i: number) => new Date(Date.UTC(2026, 6, 6) + i * 864e5).toISOString().slice(0, 10); // 6 Jul 2026 is a Monday
+
+  it('spots heavier Mondays even during a steady loss', () => {
+    const list = Array.from({ length: 70 }, (_, i) => e(day(i), 90 - i * 0.05 + (i % 7 === 0 ? 0.8 : 0)));
+    const w = weekdayPattern(list)!;
+    expect(w.heaviest).toBe(0);
+    expect(w.spread).toBeGreaterThan(0.5);
+  });
+
+  it('shows no pattern for a steady loss without a weekday effect', () => {
+    // The smoothed trend lags during a loss; a lagging comparison would make every day look lighter.
+    const list = Array.from({ length: 70 }, (_, i) => e(day(i), 90 - i * 0.08));
+    const w = weekdayPattern(list)!;
+    expect(w.spread).toBeLessThan(0.05);
+    expect(Math.max(...w.byDay.map(v => Math.abs(v ?? 0)))).toBeLessThan(0.05);
+  });
+
+  it('also works with gaps between weigh-ins', () => {
+    const list = Array.from({ length: 105 }, (_, i) => i).filter(i => i % 3 !== 2).map(i => e(day(i), 85 - i * 0.04 + ((i % 7) === 5 ? -0.6 : 0)));
+    expect(weekdayPattern(list)!.lightest).toBe(5); // Saturdays
+  });
+
+  it('needs about six weeks of data', () => {
+    expect(weekdayPattern(Array.from({ length: 30 }, (_, i) => e(day(i), 80)))).toBeNull();
   });
 });

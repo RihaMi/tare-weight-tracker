@@ -6,6 +6,12 @@ import { LB } from './units';
 // Motivation: weekly averages, logging streaks and milestones. All pure
 // functions over sorted entries, so they are easy to test.
 
+/** Exponentially smoothed trend: each weigh-in moves the trend a quarter of the way toward it. */
+export function trendSeries(entries: { date: string; kg: number }[], alpha = 0.25): { date: string; kg: number }[] {
+  let t: number | null = null;
+  return entries.map(e => { t = t == null ? e.kg : t + alpha * (e.kg - t); return { date: e.date, kg: t }; });
+}
+
 /** Monday of the week containing `date` (ISO weeks start on Monday). */
 export const weekStart = (date: string): string => addDays(date, -((toD(date).getUTCDay() + 6) % 7));
 
@@ -138,3 +144,77 @@ export const newMilestones = (before: Milestone[], after: Milestone[]): Mileston
   const seen = new Set(before.map(m => m.key));
   return after.filter(m => !seen.has(m.key));
 };
+
+export interface Plateau { days: number; since: string; changeKg: number }
+
+/**
+ * A plateau: the smoothed trend has stayed within a narrow band (0.3 kg, or
+ * 0.4 % of body weight if that's more) for at least two weeks and five
+ * weigh-ins. Uses the trend, so one heavy or light day can't trigger it.
+ */
+export function plateau(entries: Entry[]): Plateau | null {
+  if (entries.length < 6) return null;
+  const tr = trendSeries(entries);
+  const last = tr[tr.length - 1];
+  const band = Math.max(0.3, last.kg * 0.004);
+  let i = tr.length - 1;
+  while (i > 0 && Math.abs(tr[i - 1].kg - last.kg) <= band) i--;
+  const days = daysBetween(tr[i].date, last.date);
+  if (days < 14 || tr.length - i < 5) return null;
+  return { days, since: tr[i].date, changeKg: last.kg - tr[i].kg };
+}
+
+export interface WeekdayPattern {
+  /** Average kg above (+) or below (−) a typical day, Monday first; null where there's too little data. */
+  byDay: Array<number | null>;
+  heaviest: number;  // 0 = Monday
+  lightest: number;
+  spread: number;    // kg between the heaviest and lightest day
+}
+
+/**
+ * Weight expected on an entry's date from a straight line fitted through the
+ * weigh-ins within a week either side. Centred, so unlike the smoothed trend
+ * it doesn't lag behind during a loss or gain. Null if too few neighbours.
+ */
+function localLevel(entries: Entry[], i: number, halfWindowDays = 7): number | null {
+  const pts: Array<[number, number]> = [];
+  for (const e of entries) {
+    const x = daysBetween(entries[i].date, e.date);
+    if (Math.abs(x) <= halfWindowDays) pts.push([x, e.kg]);
+  }
+  if (pts.length < 4) return null;
+  const n = pts.length, sx = pts.reduce((s, p) => s + p[0], 0), sy = pts.reduce((s, p) => s + p[1], 0);
+  const sxx = pts.reduce((s, p) => s + p[0] * p[0], 0), sxy = pts.reduce((s, p) => s + p[0] * p[1], 0);
+  const den = n * sxx - sx * sx;
+  const slope = den ? (n * sxy - sx * sy) / den : 0;
+  return (sy - slope * sx) / n; // the line's value at this entry's date (x = 0)
+}
+
+/**
+ * How each day of the week compares with the local level around it. Using a
+ * centred local fit (not the lagging trend, and not the overall average)
+ * keeps a steady loss or gain from making every day look lighter or heavier.
+ * Values are centred so the days average to zero.
+ * Needs six weeks of data and at least three weigh-ins on four different weekdays.
+ */
+export function weekdayPattern(entries: Entry[]): WeekdayPattern | null {
+  if (entries.length < 21 || daysBetween(entries[0].date, entries[entries.length - 1].date) < 42) return null;
+  const sums = Array<number>(7).fill(0), counts = Array<number>(7).fill(0);
+  entries.forEach((e, i) => {
+    const level = localLevel(entries, i);
+    if (level == null) return;
+    const dow = (toD(e.date).getUTCDay() + 6) % 7;
+    sums[dow] += e.kg - level;
+    counts[dow]++;
+  });
+  const raw = sums.map((s, d) => (counts[d] >= 3 ? s / counts[d] : null));
+  const present = raw.filter((v): v is number => v != null);
+  const mean = present.length ? present.reduce((a, b) => a + b, 0) / present.length : 0;
+  const byDay = raw.map(v => (v == null ? null : v - mean));
+  const known = byDay.flatMap((v, d) => (v == null ? [] : [[v, d] as const]));
+  if (known.length < 4) return null;
+  const [maxV, heaviest] = known.reduce((a, b) => (b[0] > a[0] ? b : a));
+  const [minV, lightest] = known.reduce((a, b) => (b[0] < a[0] ? b : a));
+  return { byDay, heaviest, lightest, spread: maxV - minV };
+}

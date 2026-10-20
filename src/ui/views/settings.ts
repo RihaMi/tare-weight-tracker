@@ -65,6 +65,10 @@ export function settingsCard(): string {
           <select id="autoLock">${LOCK_OPTIONS.map(([v, l]) => `<option value="${v}" ${s.autoLockMinutes === v ? 'selected' : ''}>${t(l)}</option>`).join('')}</select></label>` : ''}
       </div>
       <div class="setting">
+        <div class="setting-text"><h3>${t('settings.quickLog')}</h3><p class="note flush">${t('settings.quickLogText')}</p></div>
+        <div class="setting-ctl"><label class="switch"><input type="checkbox" id="quickLogOn" ${s.quickLog ? 'checked' : ''}><span>${t('settings.quickLogOn')}</span></label></div>
+      </div>
+      <div class="setting">
         <div class="setting-text"><h3>${t('settings.reminder')}</h3><p class="note flush">${t('settings.reminderText')}</p></div>
         <div class="setting-ctl">
           <label class="switch"><input type="checkbox" id="remOn" ${s.reminder.enabled ? 'checked' : ''}><span>${t('settings.remindMe')}</span></label>
@@ -134,6 +138,10 @@ export function bindSettings(): void {
   $('#autoLock')?.addEventListener('change', ev => {
     app.data.settings.autoLockMinutes = +(ev.target as HTMLSelectElement).value;
     commit(t('settings.autoLockSaved'));
+  });
+  $('#quickLogOn').addEventListener('change', ev => {
+    app.data.settings.quickLog = (ev.target as HTMLInputElement).checked;
+    commit(t('settings.quickLogSaved'));
   });
   $('#remOn').addEventListener('change', ev => {
     app.data.settings.reminder.enabled = (ev.target as HTMLInputElement).checked;

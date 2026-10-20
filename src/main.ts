@@ -11,14 +11,16 @@ import { bodyView } from './ui/views/body';
 import { bindCalories, caloriesView, resetCalories } from './ui/views/calories';
 import { historyView, toggleWeeks } from './ui/views/history';
 import { overviewView } from './ui/views/overview';
-import { bindProfile, profileView } from './ui/views/profile';
+import { bindProfile, downloadBackup, profileView } from './ui/views/profile';
+import { backupNudge } from './lib/backupNudge';
+import { announceSaved, initTabSync } from './ui/sync';
 import { resetSettingsForm } from './ui/views/settings';
 import { updateBadge } from './ui/badge';
 import { initLock, isLocked, showLock } from './ui/lock';
 import { applyTheme } from './ui/theme';
 import { isPastTime } from './lib/ics';
 import { todayISO } from './lib/dates';
-import { resolveLang, setLang, t, translateStatic, type Key } from './i18n';
+import { resolveLang, setLang, t, tn, translateStatic, type Key } from './i18n';
 import type { SampleText } from './data/sample';
 
 const VIEWS: Record<Tab, () => string> = { overview: overviewView, history: historyView, body: bodyView, calories: caloriesView, profile: profileView };
@@ -52,15 +54,44 @@ function reminderBanner(): string {
     <button class="btn primary" data-act="log">${t('reminder.log')}</button></div>`;
 }
 
+function backupBanner(): string {
+  const n = backupNudge(app.data);
+  if (!n) return '';
+  const text = n.kind === 'never' ? t('backup.remindNever') : tn('backup.remindStale', n.days);
+  return `<div class="banner backup"><span>${text}</span>
+    <span class="actions"><button class="btn" data-act="backupLater">${t('backup.later')}</button><button class="btn primary" data-act="backupNow">${t('backup.download')}</button></span></div>`;
+}
+
 function render(): void {
   if (isLocked()) return; // never put data on the page behind the lock screen
   renderHeader();
   const view = $('#view');
-  view.innerHTML = (app.tab === 'profile' ? '' : reminderBanner() + sampleBanner()) + VIEWS[app.tab]();
+  view.innerHTML = (app.tab === 'profile' ? '' : reminderBanner() + (app.tab === 'overview' ? backupBanner() : '') + sampleBanner()) + VIEWS[app.tab]();
   if (app.tab === 'overview') drawOverviewChart();
   if (app.tab === 'calories') bindCalories();
   if (app.tab === 'profile') bindProfile(); else resetSettingsForm();
   updateBadge();
+}
+
+/**
+ * Quick log: open the entry form once a day when the active profile has no
+ * weigh-in for today. Remembered per device so reloading doesn't reopen it.
+ */
+const QUICK_KEY = 'tare.quickLogDay';
+function maybeQuickLog(): void {
+  const p = profile(), today = todayISO();
+  if (!app.data.settings.quickLog || p.sample || !p.entries.length || p.entries.some(e => e.date === today)) return;
+  if (isLocked() || $<HTMLDialogElement>('#entryDlg').open) return;
+  try { if (localStorage.getItem(QUICK_KEY) === today) return; localStorage.setItem(QUICK_KEY, today); } catch { /* still open it once now */ }
+  openEntry();
+}
+
+/** Opened from the app icon's "Log weight" shortcut (?action=log). */
+function handleLaunchAction(): void {
+  const params = new URLSearchParams(location.search);
+  if (params.get('action') !== 'log') return;
+  history.replaceState(null, '', location.pathname + '#' + app.tab);
+  openEntry();
 }
 
 let hiddenAt = 0;
@@ -68,7 +99,7 @@ function lockNow(): void {
   $<HTMLDialogElement>('#entryDlg').close();
   $('#view').innerHTML = '';
   $('#profileSel').innerHTML = '';
-  showLock(render);
+  showLock(() => { render(); maybeQuickLog(); });
 }
 
 /** Locks again after Tare has been in the background for the chosen time. */
@@ -85,7 +116,7 @@ function setupAutoLock(): void {
   });
   document.addEventListener('visibilitychange', () => {
     // Coming back after a while: refresh the reminder banner and badge.
-    if (!document.hidden && !isLocked() && !$<HTMLDialogElement>('#entryDlg').open) render();
+    if (!document.hidden && !isLocked() && !$<HTMLDialogElement>('#entryDlg').open) { render(); maybeQuickLog(); }
   });
 }
 
@@ -132,6 +163,11 @@ function bindGlobalEvents(): void {
       case 'logMeas': openEntry(null, true); break;
       case 'newProfile': newProfile(); break;
       case 'toggleWeeks': toggleWeeks(); render(); break;
+      case 'backupNow': downloadBackup(); break;
+      case 'backupLater':
+        app.data.settings.backupSnoozeUntil = Date.now() + 7 * 864e5;
+        commit();
+        break;
       case 'clearSample':
         app.data.profiles = app.data.profiles.filter(p => !p.sample);
         if (!app.data.profiles.length) app.data.profiles.push(blankProfile(t('profile.defaultName')));
@@ -141,6 +177,7 @@ function bindGlobalEvents(): void {
         break;
     }
   });
+  $('#entryDlg').addEventListener('close', () => { if (renderWhenDialogCloses) { renderWhenDialogCloses = false; render(); } });
   window.addEventListener('popstate', () => {
     const h = location.hash.slice(1);
     app.tab = isTab(h) ? h : 'overview';
@@ -179,6 +216,17 @@ function sampleText(): SampleText {
   return { name: t('sample.name'), notes };
 }
 
+/** Another Tare window saved: take its data, and redraw unless the user is mid-entry. */
+let renderWhenDialogCloses = false;
+function onExternalChange(): void {
+  applyLanguage();
+  applyTheme(app.data.settings.theme);
+  resetCalories();
+  if ($<HTMLDialogElement>('#entryDlg').open) { renderWhenDialogCloses = true; return; }
+  render();
+  toast(t('app.synced'));
+}
+
 /** Sets the language from settings, translates the static page and re-renders. */
 function applyLanguage(): void {
   setLang(resolveLang(app.data.settings.lang));
@@ -206,7 +254,8 @@ async function start(): Promise<void> {
   app.data = data ?? freshData([sampleProfile(undefined, sampleText())]);
   applyLanguage();
   applyTheme(app.data.settings.theme);
-  app.persist = createSaver(store, () => toast(t('app.saveFailed')));
+  const save = createSaver(store, () => toast(t('app.saveFailed')));
+  app.persist = d => save(d).then(announceSaved);
   const h = location.hash.slice(1);
   app.tab = isTab(h) ? h : 'overview';
   app.chartRange = 90;
@@ -216,11 +265,14 @@ async function start(): Promise<void> {
   initEntryDialog();
   initLock();
   bindGlobalEvents();
+  initTabSync(onExternalChange);
   setupInstall();
   setupAutoLock();
   const afterUnlock = () => {
     render();
     if (imported) toast(t('app.importedLegacy'));
+    const fromShortcut = new URLSearchParams(location.search).get('action') === 'log';
+    if (fromShortcut) handleLaunchAction(); else maybeQuickLog();
   };
   if (app.data.settings.pin) showLock(afterUnlock); else afterUnlock();
   if (import.meta.env.PROD) setupUpdates();

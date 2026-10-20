@@ -3,6 +3,7 @@ import { calc } from '../lib/calc';
 import { DAY, addDays, fmtDate, iso, toD } from '../lib/dates';
 import { disp, fmtW } from '../lib/units';
 import { $ } from './dom';
+import { trendSeries } from '../lib/insights';
 import { t } from '../i18n';
 import { fmtNum } from '../lib/format';
 
@@ -13,11 +14,6 @@ export function niceStep(span: number, target = 5): number {
   return 10 * mag;
 }
 
-/** Exponentially smoothed trend: each weigh-in moves the trend a quarter of the way toward it. */
-export function trendSeries(entries: { date: string; kg: number }[], alpha = 0.25): { date: string; kg: number }[] {
-  let t: number | null = null;
-  return entries.map(e => { t = t == null ? e.kg : t + alpha * (e.kg - t); return { date: e.date, kg: t }; });
-}
 
 export function drawChart(box: HTMLElement, p: Profile, u: Unit, range: number): void {
   const r = calc(p);

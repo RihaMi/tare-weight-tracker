@@ -67,7 +67,8 @@ function statsCard(p: Profile, r: Stats): string {
 function bmiCard(p: Profile, r: Stats): string {
   if (!r.bmi) return '';
   const u = unit(), lo = 15, hi = 42;
-  const pos = Math.min(1, Math.max(0, (r.bmi - lo) / (hi - lo))) * 100;
+  // Kept away from the very ends so the value above the marker stays inside the card.
+  const pos = Math.min(0.96, Math.max(0.04, (r.bmi - lo) / (hi - lo))) * 100;
   const cat = bmiCategory(r.bmi), h2 = (p.heightCm! / 100) ** 2;
   const catName = (id: string) => t(`bmi.${id}` as Key);
   let next: string;

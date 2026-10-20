@@ -186,8 +186,10 @@ test('loads nothing from outside the app, and its own fonts', async ({ page }) =
   page.on('request', r => { const u = new URL(r.url()); if (!['localhost', '127.0.0.1'].includes(u.hostname) && u.protocol.startsWith('http')) outside.push(r.url()); });
   await open(page, '/');
   for (const tab of ['history', 'body', 'calories', 'profile']) { await page.goto('/#' + tab); await expect(page.locator('#view .card').first()).toBeVisible(); }
-  await page.evaluate(() => document.fonts.ready);
-  const loaded = await page.evaluate(() => [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family.replace(/"/g, '')));
-  for (const family of ['Bricolage Grotesque', 'Figtree', 'Azeret Mono']) expect(loaded).toContain(family);
+  // Ask for each font outright rather than relying on a screen having used it yet.
+  for (const family of ['Bricolage Grotesque', 'Figtree', 'Azeret Mono']) {
+    const faces = await page.evaluate(f => document.fonts.load(`16px "${f}"`).then(l => l.map(x => x.status)), family);
+    expect(faces, family).toContain('loaded');
+  }
   expect(outside).toEqual([]);
 });

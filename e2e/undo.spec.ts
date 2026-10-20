@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { createProfile, expect, test, type Page } from './fixtures';
 
 // Deletes can be undone for a few seconds, with the Undo button or Ctrl+Z.
 
@@ -58,10 +58,9 @@ test('removing the example profile can be undone', async ({ page }) => {
 
 test('a deleted profile comes back with Undo, and is selected again', async ({ page }) => {
   await ready(page, '/');
-  await page.locator('[data-act=newProfile]').click();
+  await createProfile(page, 'First');            // replaces the example
+  await createProfile(page, 'Second', true);
   await page.goto('/#profile');
-  await page.locator('#pName').fill('Second');
-  await page.locator('#profForm button[type=submit]').click();
   await expect(page.locator('#profileSel option:not([value=__new])')).toHaveCount(2);
   await page.locator('#delProfile').click();
   await page.locator('#delProfile').click();

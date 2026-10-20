@@ -472,6 +472,8 @@ dialog {
 }
 dialog::backdrop { background: rgba(8, 14, 12, .45); backdrop-filter: blur(3px); }
 dialog form { padding: 20px; }
+.setup-dlg .form { gap: 14px; }
+.setup-dlg .seg { margin-top: 6px; }
 .share-body { padding: 20px; display: grid; gap: 12px; }
 .share-img { display: block; width: auto; max-width: 100%; height: auto; max-height: min(56dvh, 600px); margin: 0 auto; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); aspect-ratio: 4 / 5; }
 .hero-share { margin-top: 14px; }

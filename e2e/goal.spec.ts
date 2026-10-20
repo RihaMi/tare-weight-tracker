@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 // The likely goal date: a range in the Stats card and a cone on the chart.
 

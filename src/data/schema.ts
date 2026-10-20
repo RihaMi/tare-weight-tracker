@@ -4,8 +4,8 @@ import { isISODate } from '../lib/dates';
 // teach migrate() how to upgrade the previous version, so old data and old
 // backup files keep loading.
 // v1: original single-file app. v2: entry ids and timestamps. v3: app settings.
-// v4: events on each profile (medication, holiday…).
-export const SCHEMA_VERSION = 4;
+// v4: events on each profile (medication, holiday…). v5: goal steps on each profile.
+export const SCHEMA_VERSION = 5;
 
 export type Unit = 'kg' | 'lb' | 'st';
 export type Sex = 'f' | 'm';
@@ -39,6 +39,9 @@ export interface WeightEvent {
   updatedAt: number;
 }
 
+/** A weight to reach on the way to the goal, optionally by a date. */
+export interface GoalStep { id: string; kg: number; date: string | null }
+
 export interface Profile {
   id: string;
   name: string;
@@ -51,6 +54,7 @@ export interface Profile {
   goalDate: string | null;
   entries: Entry[];
   events: WeightEvent[]; // oldest first
+  goalSteps: GoalStep[]; // in any order; see orderedSteps()
   sample?: boolean;
   updatedAt: number;
 }
@@ -93,7 +97,7 @@ export const newId = (prefix = ''): string =>
 export function blankProfile(name = 'Me'): Profile {
   return {
     id: newId('p_'), name, sex: 'f', birthYear: null, heightCm: null, frame: 'medium', activity: 1.375,
-    goalKg: null, goalDate: null, entries: [], events: [], updatedAt: Date.now(),
+    goalKg: null, goalDate: null, entries: [], events: [], goalSteps: [], updatedAt: Date.now(),
   };
 }
 
@@ -139,6 +143,13 @@ function cleanEvent(v: unknown, now: number): WeightEvent | null {
   };
 }
 
+function cleanStep(v: unknown): GoalStep | null {
+  const o = obj(v);
+  const kg = o ? num(o.kg) : null;
+  if (!o || kg == null || kg < 20 || kg > 400) return null;
+  return { id: typeof o.id === 'string' && o.id ? o.id : newId('st_'), kg, date: isISODate(o.date) ? o.date : null };
+}
+
 function cleanProfile(v: unknown, now: number): Profile | null {
   const o = obj(v);
   if (!o) return null;
@@ -160,6 +171,8 @@ function cleanProfile(v: unknown, now: number): Profile | null {
     // Before v4 there were no events.
     events: (Array.isArray(o.events) ? o.events : []).map(e => cleanEvent(e, now)).filter((e): e is WeightEvent => !!e)
       .sort((a, b) => (a.start < b.start ? -1 : 1)),
+    // Before v5 there were no goal steps.
+    goalSteps: (Array.isArray(o.goalSteps) ? o.goalSteps : []).map(cleanStep).filter((s): s is GoalStep => !!s).slice(0, 20),
     updatedAt: num(o.updatedAt) ?? now,
   };
   if (o.sample === true) p.sample = true;

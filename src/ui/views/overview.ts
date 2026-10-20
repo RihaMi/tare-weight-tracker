@@ -5,6 +5,8 @@ import { BMI_CATS, bmiCategory, calc, paceState, type Stats } from '../../lib/ca
 import { roundKcal } from '../../lib/calories';
 import { fmtDate, todayISO } from '../../lib/dates';
 import { goalDateRange } from '../../lib/forecast';
+import { orderedSteps } from '../../lib/insights';
+import { nextStep, stepsReached } from '../../lib/steps';
 import { fmtInt, fmtNum } from '../../lib/format';
 import { deltaUnit, disp, fmtDelta, fmtW, splitStone } from '../../lib/units';
 import { esc } from '../dom';
@@ -35,6 +37,28 @@ function maintainBar(p: Profile, r: Stats): string {
     </div>`;
 }
 
+/** Ticks on the progress ruler, one per goal step; reached ones filled in. */
+function stepTicks(p: Profile, r: Stats): string {
+  const done = stepsReached(p.goalSteps, r.E, p.goalKg);
+  return orderedSteps(p.goalSteps, r.start!, p.goalKg).map(s => {
+    const pct = ((s.kg - r.start!) / (p.goalKg! - r.start!)) * 100;
+    return `<div class="ruler-step ${done.has(s.id) ? 'done' : ''}" style="left:${pct.toFixed(1)}%" title="${esc(fmtW(s.kg, unit()))}"></div>`;
+  }).join('');
+}
+
+/** "Next step: 82.0 kg · 2.1 kg to go · by 1 Dec, 0.4 kg a week". */
+function stepLine(p: Profile, r: Stats): string {
+  const n = nextStep(p.goalSteps, r.E, p.goalKg);
+  if (!n) return '';
+  const u = unit();
+  let when = '';
+  if (n.step.date && n.daysLeft != null) {
+    const date = fmtDate(n.step.date, { day: 'numeric', month: 'short' });
+    when = n.daysLeft > 0 ? ' · ' + t('steps.byNeed', { date, w: fmtW(n.needPerWeekKg!, u) }) : ' · ' + t('steps.wasDue', { date });
+  }
+  return `<p class="note flush step-line">${t('steps.next', { w: fmtW(n.step.kg, u), left: fmtW(n.remainingKg, u) })}${when}</p>`;
+}
+
 function hero(p: Profile, r: Stats): string {
   const u = unit(), pace = paceState(r), last = r.last!;
   const goalTxt = !r.hasGoal ? t('overview.noGoal')
@@ -47,9 +71,9 @@ function hero(p: Profile, r: Stats): string {
     <div class="reading" aria-label="${esc(t('overview.currentWeight', { w: fmtW(r.cur, u) }))}">${readingHTML(r.cur!)}</div>
     <div class="hero-sub">${t('overview.since', { delta: fmtDelta(r.change!, u), date: fmtDate(r.first!.date, { day: 'numeric', month: 'short', year: 'numeric' }) })} · ${goalTxt}</div>
     ${r.maintenance ? maintainBar(p, r) : r.hasGoal ? `<div class="ruler" aria-label="${esc(t('overview.progressAria', { pct }))}">
-      <div class="ruler-track"><div class="ruler-ticks"></div><div class="ruler-bar"></div><div class="ruler-fill" style="width:${pct}%"></div><div class="ruler-mark" style="left:${pct}%"></div></div>
+      <div class="ruler-track"><div class="ruler-ticks"></div><div class="ruler-bar"></div><div class="ruler-fill" style="width:${pct}%"></div>${stepTicks(p, r)}<div class="ruler-mark" style="left:${pct}%"></div></div>
       <div class="ruler-labels"><span>${t('overview.start')} <b>${fmtW(r.start, u)}</b></span><span>${t('overview.there', { pct })}</span><span>${t('common.goal')} <b>${fmtW(p.goalKg, u)}</b></span></div>
-    </div>` : `<p class="note">${t('overview.setGoal', { link: profileLink() })}</p>`}
+    </div>${stepLine(p, r)}` : `<p class="note">${t('overview.setGoal', { link: profileLink() })}</p>`}
     ${r.E.length > 1 ? `<div class="actions start hero-share"><button type="button" class="btn small-btn" data-act="share">${t('share.button')}</button></div>` : ''}
   </section>`;
 }

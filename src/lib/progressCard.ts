@@ -34,7 +34,7 @@ export function cardModel(p: Profile, u: Unit, today: string): CardModel | null 
   const first = r.E[0].date, last = r.E[r.E.length - 1].date;
   const span = daysBetween(first, last) || 1;
   const at = (date: string) => daysBetween(first, date) / span;
-  const { achieved } = milestones({ entries: r.E, goalKg: p.goalKg, heightCm: p.heightCm, unit: u });
+  const { achieved } = milestones({ entries: r.E, goalKg: p.goalKg, heightCm: p.heightCm, unit: u, steps: p.goalSteps });
   return {
     from: first, to: last, days: r.days!,
     changeKg: r.change!, perWeekKg: r.perDay! * 7,

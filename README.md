@@ -65,7 +65,7 @@ public/        icons (regenerate with `npm run icons`)
 
 ### Browser tests and checks
 
-`npm run e2e` runs Playwright tests in Chromium, at desktop and phone size. They cover logging a weight, switching units, the PIN lock, CSV import, Czech, and offline use. First run `npx playwright install chromium` once, and `npm run build` before each run.
+`npm run e2e` runs Playwright tests in Chromium at desktop and phone size, and in WebKit (Safari's engine) at iPhone size. They cover the main flows, including logging a weight, units, the PIN lock, import, Czech and offline use. A few Chrome-only features (saving backups to a folder, the virtual authenticator for Face ID unlock) are tested in Chromium only. First run `npx playwright install chromium webkit` once, and `npm run build` before each run.
 
 The same command runs the layout check, `scripts/visual-audit.js`, on every screen. It runs at 320, 414, 768 and 1440 px wide, in light and dark mode, in English and Czech. It looks for sideways scrolling, elements off the screen, cut-off or covered text, text drawn across a bar or badge, and contrast below WCAG AA. You can also paste the script into the browser console and run `await tareAudit()`.
 

@@ -16,7 +16,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
       test.use({ colorScheme, locale });
       for (const width of widths) {
         test(`${width}px wide`, async ({ page }, info) => {
-          test.skip(info.project.name !== 'desktop', 'sizes are set per test; one browser is enough');
+          // Sizes are set per test, so one Chromium run is enough, plus WebKit for Safari's rendering.
+          test.skip(info.project.name === 'phone', 'sizes are set per test; Chromium runs once as desktop');
           await page.setViewportSize({ width, height: width < 768 ? 800 : 900 });
           await page.goto('/');
           await expect(page.locator('#view .card').first()).toBeVisible();

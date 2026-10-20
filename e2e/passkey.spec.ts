@@ -26,6 +26,9 @@ async function setPin(page: Page, pin: string) {
   await expect(page.locator('[data-pin=remove]')).toBeVisible(slow);
 }
 
+// The virtual authenticator is a Chrome DevTools feature. On a real iPhone this needs testing by hand (#15).
+test.skip(({ browserName }) => browserName !== 'chromium', "needs Chrome's virtual authenticator");
+
 test.beforeEach(async ({ page }) => { await withAuthenticator(page); });
 
 test('Face ID or fingerprint unlocks instead of the PIN', async ({ page }) => {

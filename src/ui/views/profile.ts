@@ -1,9 +1,14 @@
 import { app, commit, go, profile, unit } from '../../app';
-import { mergeEntries, parseBackup, restoredData, toBackupJSON, toCSV } from '../../data/backup';
+import { mergeEntries, readBackupFile, restoredData, toBackupJSON, toCSV } from '../../data/backup';
+import { isEnvelope, keyInfoFor, unseal, type Envelope } from '../../lib/crypto';
+import { migrate } from '../../data/schema';
+import { formatLocale } from '../../lib/format';
+import { autoBackupState, backUpNow, chooseBackupFolder, resumeAutoBackup, stopAutoBackup } from '../autoBackup';
 import { guessUnit, readImportFile, toEntries, type ImportPreview, type WeightUnit } from '../../data/importers';
 import { DataError, blankProfile, type AppData, type Frame, type Profile } from '../../data/schema';
 import { t, tn, type Key } from '../../i18n';
-import { calc, idealKg } from '../../lib/calc';
+import { calc } from '../../lib/calc';
+import { suggestGoal } from '../../lib/health';
 import { ACTIVITY } from '../../lib/calories';
 import { addDays, fmtDate, todayISO } from '../../lib/dates';
 import { CM_IN, deltaUnit, disp, fmtW, fromDisp, isMetric } from '../../lib/units';
@@ -15,7 +20,8 @@ import { bindSettings, settingsCard } from './settings';
 import { commitWithUndo } from '../undo';
 import { applyTheme } from '../theme';
 
-let pendingRestore: { data: AppData; name: string } | null = null;
+/** A backup picked to restore: its data, or an encrypted backup still waiting for its PIN. */
+let pendingRestore: { data: AppData; name: string } | { env: Envelope; name: string } | null = null;
 let pendingImport: { name: string; preview: ImportPreview; unit: WeightUnit } | null = null;
 
 const counts = (d: AppData) => ({
@@ -65,6 +71,7 @@ export function profileView(): string {
         <div class="actions start"><button type="button" class="btn primary" id="bkDownload">${t('backup.download')}</button><button type="button" class="btn" id="bkRestore">${t('backup.restore')}</button></div>
         <div id="restoreConfirm" hidden></div>
       </div>
+      ${autoBackupBlock()}
       <div class="bk">
         <h3>${t('backup.csv')}</h3>
         <p class="note flush">${t('backup.csvText', { name: esc(p.name) })}</p>
@@ -97,11 +104,13 @@ function showRestoreConfirm(): void {
   const box = $('#restoreConfirm');
   if (!pendingRestore) { box.hidden = true; return; }
   box.hidden = false;
+  if ('env' in pendingRestore) { askBackupPin(box, pendingRestore); return; }
+  const pending = pendingRestore;
   box.innerHTML = `<div class="warnbox">
-    <p class="flush">${t('backup.confirm', { file: esc(pendingRestore.name), ...counts(pendingRestore.data) })}</p>
+    <p class="flush">${t('backup.confirm', { file: esc(pending.name), ...counts(pending.data) })}</p>
     <div class="actions start"><button type="button" class="btn danger armed btn-wrap" id="restoreGo">${t('backup.replace')}</button><button type="button" class="btn" id="restoreCancel">${t('common.cancel')}</button></div></div>`;
   $('#restoreGo').addEventListener('click', () => {
-    app.data = restoredData(pendingRestore!.data, app.data); pendingRestore = null; resetCalories();
+    app.data = restoredData(pending.data, app.data); pendingRestore = null; resetCalories();
     app.applyLanguage();
     applyTheme(app.data.settings.theme);
     commit(t('backup.restored'));
@@ -161,6 +170,50 @@ function showImportConfirm(reading?: string): void {
   $('#importCancel').addEventListener('click', () => { pendingImport = null; showImportConfirm(); });
 }
 
+/** An encrypted backup (made while a PIN was set) opens with that PIN, then restores like any other. */
+function askBackupPin(box: HTMLElement, pending: { env: Envelope; name: string }): void {
+  box.innerHTML = `<form class="warnbox" id="restorePinForm" novalidate>
+    <p class="flush">${t('backup.encryptedAsk', { file: esc(pending.name) })}</p>
+    <div class="inline-in"><input id="restorePin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" aria-label="${esc(t('backup.pinLabel'))}">
+      <button type="submit" class="btn primary">${t('backup.unlock')}</button><button type="button" class="btn" id="restoreCancel">${t('common.cancel')}</button></div>
+    <p class="flush err" id="restorePinErr" role="alert" hidden></p>
+  </form>`;
+  $('#restoreCancel').addEventListener('click', () => { pendingRestore = null; showRestoreConfirm(); });
+  $('#restorePinForm').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const pin = $<HTMLInputElement>('#restorePin').value;
+    try {
+      const data = migrate(await unseal(pending.env, await keyInfoFor(pin, pending.env)));
+      pendingRestore = { data, name: pending.name };
+      showRestoreConfirm();
+    } catch {
+      const err = $('#restorePinErr'); err.hidden = false; err.textContent = t('backup.pinWrong');
+    }
+  });
+  setTimeout(() => $<HTMLInputElement>('#restorePin')?.focus(), 30);
+}
+
+const backupTime = (ms: number) => new Date(ms).toLocaleString(formatLocale(), { dateStyle: 'medium', timeStyle: 'short' });
+
+/** Automatic backups to a folder: what's set up, and the buttons to change it. */
+function autoBackupBlock(): string {
+  const s = autoBackupState();
+  const pinNote = app.data.settings.pin ? `<p class="note flush">${t('autobackup.encrypted')}</p>` : '';
+  let body: string;
+  if (s.kind === 'unsupported') body = `<p class="note flush">${t('autobackup.unsupported')}</p>`;
+  else if (s.kind === 'off') {
+    body = `<p class="note flush">${t('autobackup.offText')}</p>${pinNote}
+      <div class="actions start"><button type="button" class="btn primary" id="abChoose">${t('autobackup.choose')}</button></div>`;
+  } else if (s.kind === 'on') {
+    body = `<p class="note flush">${t('autobackup.onText', { folder: esc(s.folder) })} ${s.lastAt ? t('autobackup.last', { time: backupTime(s.lastAt) }) : ''}</p>${pinNote}
+      <div class="actions start"><button type="button" class="btn" id="abNow">${t('autobackup.now')}</button><button type="button" class="btn" id="abStop">${t('autobackup.stop')}</button></div>`;
+  } else {
+    body = `<p class="warnbox">${t('autobackup.pausedText', { folder: esc(s.folder) })}</p>
+      <div class="actions start"><button type="button" class="btn primary" id="abResume">${t('autobackup.resume')}</button><button type="button" class="btn" id="abStop">${t('autobackup.stop')}</button></div>`;
+  }
+  return `<div class="bk" id="autoBackup"><h3>${t('autobackup.title')}</h3>${body}</div>`;
+}
+
 /** Clears a half-finished import when leaving the screen. */
 export const resetImport = (): void => { pendingImport = null; };
 
@@ -196,12 +249,11 @@ export function bindProfile(): void {
   $('#suggestBtn').addEventListener('click', () => {
     const tmp: Profile = structuredClone(p);
     readProfileForm(tmp);
-    const r = calc(tmp), ideal = idealKg(tmp), note = $('#suggestNote');
+    const r = calc(tmp), note = $('#suggestNote');
+    const sg = r.cur != null ? suggestGoal(tmp, r.cur) : null;
     note.hidden = false;
-    if (!ideal || r.cur == null) { note.textContent = t('profile.suggestNeed'); return; }
-    const h2 = (tmp.heightCm! / 100) ** 2;
-    const goal = Math.min(24.9 * h2, Math.max(18.5 * h2, ideal));
-    const weeks = Math.ceil(Math.abs(r.cur - goal) / 0.5);
+    if (!sg) { note.textContent = t('profile.suggestNeed'); return; }
+    const { goalKg: goal, weeks } = sg;
     $<HTMLInputElement>('#pGoal').value = disp(goal, unit()).toFixed(1);
     $<HTMLInputElement>('#pGoalDate').value = addDays(todayISO(), weeks * 7);
     note.textContent = t('profile.suggestNote', { weeks, date: fmtDate(addDays(todayISO(), weeks * 7), { day: 'numeric', month: 'long', year: 'numeric' }) });
@@ -232,9 +284,17 @@ export function bindProfile(): void {
   $('#bkRestore').addEventListener('click', async () => {
     const file = await pickTextFile('.json,application/json');
     if (!file) return;
-    try { pendingRestore = { data: parseBackup(file.text), name: file.name }; showRestoreConfirm(); }
+    try {
+      const parsed = readBackupFile(file.text);
+      pendingRestore = isEnvelope(parsed) ? { env: parsed, name: file.name } : { data: parsed, name: file.name };
+      showRestoreConfirm();
+    }
     catch (e) { pendingRestore = null; showFileProblem('#restoreConfirm', file.name, e); }
   });
+  $('#abChoose')?.addEventListener('click', async () => { if (await chooseBackupFolder()) toast(t('autobackup.started')); });
+  $('#abNow')?.addEventListener('click', async () => { await backUpNow(); toast(t(autoBackupState().kind === 'on' ? 'autobackup.done' : 'autobackup.failed')); });
+  $('#abStop')?.addEventListener('click', async () => { await stopAutoBackup(); toast(t('autobackup.stopped')); });
+  $('#abResume')?.addEventListener('click', async () => { toast(t(await resumeAutoBackup() ? 'autobackup.resumed' : 'autobackup.notAllowed')); });
   $('#csvDownload').addEventListener('click', () => {
     download(`tare-${slug(p.name)}-${fileStamp()}.csv`, toCSV(p), 'text/csv');
     toast(t('backup.csvDownloaded'));

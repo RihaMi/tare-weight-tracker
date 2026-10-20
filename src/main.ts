@@ -1,11 +1,13 @@
 import './fonts.css';
 import './styles.css';
 import { registerSW } from 'virtual:pwa-register';
-import { app, commit, go, isTab, profile, type Tab } from './app';
+import { app, commit, isTab, profile, type Tab } from './app';
 import { sampleProfile } from './data/sample';
 import { blankProfile, freshData, type Unit } from './data/schema';
 import { createSaver, loadData, openStore } from './data/storage';
 import { showStartupProblem } from './ui/startup';
+import { autoBackupState, initAutoBackup, resumeAutoBackup, scheduleAutoBackup } from './ui/autoBackup';
+import { openSetup, shouldOfferSetup } from './ui/setup';
 import { drawChart } from './ui/chart';
 import { $, esc, toast } from './ui/dom';
 import { initEntryDialog, openEntry } from './ui/entryDialog';
@@ -20,6 +22,7 @@ import { backupNudge } from './lib/backupNudge';
 import { announceSaved, initTabSync } from './ui/sync';
 import { keyInfoFor, newKeyInfo, seal, unseal, type Envelope } from './lib/crypto';
 import { verifyPin } from './lib/pin';
+import { initPasskeySupport } from './lib/passkey';
 import { migrate } from './data/schema';
 import { resetSettingsForm } from './ui/views/settings';
 import { updateBadge } from './ui/badge';
@@ -97,6 +100,11 @@ function setupErrorBar(): void {
 }
 
 function backupBanner(): string {
+  const auto = autoBackupState();
+  if (auto.kind === 'paused') {
+    return `<div class="banner backup"><span>${t('autobackup.pausedBanner', { folder: esc(auto.folder) })}</span>
+      <button class="btn primary" data-act="resumeAutoBackup">${t('autobackup.resume')}</button></div>`;
+  }
   const n = backupNudge(app.data);
   if (!n) return '';
   const text = n.kind === 'never' ? t('backup.remindNever') : tn('backup.remindStale', n.days);
@@ -207,14 +215,9 @@ function setupAutoLock(): void {
   });
 }
 
+/** "Create my profile" and "+ New profile" open the short setup. */
 function newProfile(): void {
-  const np = blankProfile(t(app.data.profiles.some(p => !p.sample) ? 'profile.newName' : 'profile.defaultName'));
-  app.data.profiles.push(np);
-  app.data.activeId = np.id;
-  resetCalories();
-  commit();
-  go('profile');
-  setTimeout(() => $<HTMLInputElement>('#pName')?.select(), 30);
+  openSetup({ firstRun: false });
 }
 
 function bindGlobalEvents(): void {
@@ -260,6 +263,7 @@ function bindGlobalEvents(): void {
       case 'newProfile': newProfile(); break;
       case 'toggleWeeks': toggleWeeks(); render(); break;
       case 'backupNow': downloadBackup(); break;
+      case 'resumeAutoBackup': void resumeAutoBackup().then(ok => toast(t(ok ? 'autobackup.resumed' : 'autobackup.notAllowed'))); break;
       case 'retrySave': void app.persist(app.data); break;
       case 'backupLater':
         app.data.settings.backupSnoozeUntil = Date.now() + 7 * 864e5;
@@ -379,14 +383,17 @@ async function start(): Promise<void> {
   applyLanguage();
   applyTheme(app.data.settings.theme);
   // With a PIN (and its key, once unlocked) every save is encrypted.
-  const save = createSaver(store, () => setSaveFailed(true), d => (d.settings.pin && app.key ? seal(d, app.key) : d), () => setSaveFailed(false));
+  const save = createSaver(store, () => setSaveFailed(true), d => (d.settings.pin && app.key ? seal(d, app.key) : d), () => { setSaveFailed(false); scheduleAutoBackup(); });
+  void initAutoBackup(() => render());
   app.persist = d => save(d).then(announceSaved);
   const h = location.hash.slice(1);
   app.tab = isTab(h) ? h : 'overview';
   app.chartRange = 90;
   app.render = render;
-  if (!data && !locked) void app.persist(app.data); // first run only: never write over encrypted data
+  const firstVisit = !data && !locked;
+  if (firstVisit) void app.persist(app.data); // first run only: never write over encrypted data
   void navigator.storage?.persist?.();
+  void initPasskeySupport().then(() => { if (app.tab === 'profile') render(); });
   // Fonts used to come from Google and were cached separately; they're part of the app now.
   void globalThis.caches?.delete('google-fonts').catch(() => {});
   initEntryDialog();
@@ -399,7 +406,9 @@ async function start(): Promise<void> {
   const afterUnlock = () => {
     render();
     if (imported) toast(t('app.importedLegacy'));
-    if (launchedToLog()) handleLaunchAction(); else maybeQuickLog();
+    if (launchedToLog()) handleLaunchAction();
+    else if (firstVisit && shouldOfferSetup()) openSetup({ firstRun: true });
+    else maybeQuickLog();
   };
   if (locked) showLock(afterUnlock, { length: locked.pinLength, verify: pin => unlockEncrypted(pin, locked) });
   else if (app.data.settings.pin) showLock(afterUnlock, { verify: unlockLoaded });

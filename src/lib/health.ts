@@ -29,3 +29,14 @@ export const idealKg = (p: Profile): number | null => (p.heightCm ? idealFromHei
 
 export const caloriePlanFor = (p: Profile, kg: number, age: number, weeklyKg: number): CaloriePlan =>
   caloriePlan({ sex: p.sex, kg, heightCm: p.heightCm ?? 0, age, activity: p.activity, weeklyKg });
+
+/**
+ * A goal near the ideal weight for the height and frame, kept inside a healthy
+ * BMI (18.5–24.9), and roughly how many weeks it takes at a steady 0.5 kg a week.
+ */
+export function suggestGoal(p: Pick<Profile, 'sex' | 'heightCm' | 'frame'>, curKg: number): { goalKg: number; weeks: number } | null {
+  if (!p.heightCm) return null;
+  const h2 = (p.heightCm / 100) ** 2;
+  const goalKg = Math.min(24.9 * h2, Math.max(18.5 * h2, idealFromHeight(p.sex, p.heightCm, p.frame)));
+  return { goalKg, weeks: Math.ceil(Math.abs(curKg - goalKg) / 0.5) };
+}

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { createProfile, expect, test, type Page } from './fixtures';
 
 // What Tare shows when something is wrong or there's nothing to show yet.
 
@@ -101,7 +101,7 @@ test('an unexpected error shows a bar with Reload', async ({ page }) => {
 test.describe('empty states', () => {
   test('Body without measurements shows one prompt', async ({ page }) => {
     await started(page);
-    await page.locator('[data-act=newProfile]').click();
+    await createProfile(page, 'Sam');
     await page.goto('/#body');
     await expect(page.locator('.card.empty h2')).toHaveText('No measurements yet');
     await expect(page.locator('.mcard')).toHaveCount(0);
@@ -111,7 +111,7 @@ test.describe('empty states', () => {
 
   test('History says when weekly averages will appear', async ({ page }) => {
     await started(page);
-    await page.locator('[data-act=newProfile]').click();
+    await createProfile(page, 'Sam');
     await page.locator('#logBtn').click();
     await page.locator('#eW').fill('80');
     await page.locator('#entryForm button[type=submit]').click();

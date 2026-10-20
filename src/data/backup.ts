@@ -1,4 +1,5 @@
 import { DataError, MEASURES, migrate, type AppData, type Entry, type Profile } from './schema';
+import { isEnvelope, type Envelope } from '../lib/crypto';
 
 // Full backups are JSON (every profile and setting). CSV is for one profile's
 // weigh-ins, to open in a spreadsheet. Importing from other apps is in importers.ts.
@@ -72,4 +73,24 @@ export function mergeEntries(p: Profile, incoming: Entry[]): { added: number; re
   p.entries = [...byDate.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
   p.updatedAt = Date.now();
   return { added, replaced };
+}
+
+/**
+ * What a backup holds, leaving out the bookkeeping that changes when one is
+ * made (when, and the reminder's snooze). Same key means nothing new to back up.
+ */
+export const backupKey = (data: AppData): string =>
+  JSON.stringify({ ...data, settings: { ...data.settings, pin: null, lastBackupAt: null, backupSnoozeUntil: null } });
+
+/** Daily backups in a folder are named by date; the newest `keep` stay, older ones can go. */
+export const BACKUP_FILE = /^tare-backup-(\d{4}-\d{2}-\d{2})\.json$/;
+export function backupsToPrune(names: string[], keep = 7): string[] {
+  return names.filter(n => BACKUP_FILE.test(n)).sort().reverse().slice(keep);
+}
+
+/** A backup file's contents: Tare data, or an encrypted backup (made while a PIN was set) that needs that PIN. */
+export function readBackupFile(text: string): AppData | Envelope {
+  let raw: unknown;
+  try { raw = JSON.parse(text); } catch { throw new DataError('notBackup', 'This file is not a Tare backup. Choose the .json file you exported.'); }
+  return isEnvelope(raw) ? raw : migrate(raw);
 }

@@ -385,7 +385,7 @@ main { padding-top: 20px; display: grid; gap: 16px; }
   .setting { grid-template-columns: minmax(0, 1fr); }
   .setting-ctl { justify-content: flex-start; }
 }
-.banner.remind { background: var(--warn-soft); border-color: var(--warn); border-style: solid; }
+.banner.remind, .banner.backup { background: var(--warn-soft); border-color: var(--warn); border-style: solid; }
 
 /* Backup */
 .backup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; margin-top: 16px; }

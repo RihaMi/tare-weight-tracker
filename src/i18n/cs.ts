@@ -11,6 +11,7 @@ export const cs: Record<Key, string | Plural> = {
   'app.offlineReady': 'Tare teď funguje i bez internetu',
   'app.saveFailed': 'Poslední změnu se nepodařilo uložit. Stáhněte si zálohu v sekci Profil a cíl.',
   'app.importedLegacy': 'Vaše záznamy z dřívější verze aplikace Tare byly převedeny',
+  'app.synced': 'Aktualizováno podle změn z jiného okna aplikace Tare',
 
   'header.install': 'Nainstalovat',
   'header.profile': 'Profil',
@@ -309,6 +310,12 @@ export const cs: Record<Key, string | Plural> = {
   'backup.importedUpdated': ', upraveno: {n}',
   'backup.importedSkipped': ', přeskočeno řádků: {n}',
   'backup.importNone': 'V souboru nejsou žádná použitelná vážení.',
+  'backup.remindNever': '<b>Zatím nemáte žádnou zálohu.</b> Tare ukládá data jen v tomto zařízení, takže záloha je vaše jediná kopie, kdyby se s ním něco stalo.',
+  'backup.remindStale': { one: '<b>Poslední záloha je stará {n} den.</b> Stáhněte si novou, ať máte v bezpečí i nedávná vážení.', few: '<b>Poslední záloha je stará {n} dny.</b> Stáhněte si novou, ať máte v bezpečí i nedávná vážení.', many: '<b>Poslední záloha je stará {n} dne.</b> Stáhněte si novou, ať máte v bezpečí i nedávná vážení.', other: '<b>Poslední záloha je stará {n} dní.</b> Stáhněte si novou, ať máte v bezpečí i nedávná vážení.' },
+  'backup.later': 'Později',
+  'backup.last': 'Poslední záloha: {date}.',
+  'backup.none': 'Zatím žádná záloha.',
+  'backup.ios': 'Na iPhonu a iPadu Safari smaže data webu, který 7 dní neotevřete. Přidejte si Tare na plochu (Sdílet → Přidat na plochu), aby se to nestalo, a dál si stahujte zálohy.',
 
   'error.notBackup': 'Tento soubor není záloha aplikace Tare. Vyberte soubor .json, který jste exportovali.',
   'error.newerVersion': 'Záloha pochází z novější verze aplikace Tare. Aktualizujte aplikaci a zkuste to znovu.',

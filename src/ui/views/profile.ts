@@ -7,6 +7,7 @@ import { ACTIVITY } from '../../lib/calories';
 import { addDays, fmtDate, todayISO } from '../../lib/dates';
 import { CM_IN, deltaUnit, disp, fromDisp, isMetric } from '../../lib/units';
 import { $, armOrRun, download, esc, pickTextFile, toast } from '../dom';
+import { isIOSBrowserTab } from '../../lib/backupNudge';
 import { resetCalories } from './calories';
 import { activityKey } from './overview';
 import { bindSettings, settingsCard } from './settings';
@@ -53,10 +54,11 @@ export function profileView(): string {
   <section class="card">
     <div class="card-head"><h2>${t('backup.title')}</h2></div>
     <p class="note flush ${app.store.kind === 'memory' ? 'warnbox' : ''}">${t(`store.${app.store.kind}` as Key)} ${t('backup.intro')}</p>
+    ${isIOSBrowserTab() ? `<p class="warnbox">${t('backup.ios')}</p>` : ''}
     <div class="backup-grid">
       <div class="bk">
         <h3>${t('backup.full')}</h3>
-        <p class="note flush">${t('backup.fullText', counts(app.data))}</p>
+        <p class="note flush">${t('backup.fullText', counts(app.data))} ${app.data.settings.lastBackupAt ? t('backup.last', { date: fmtDate(todayISOFrom(app.data.settings.lastBackupAt), { day: 'numeric', month: 'long', year: 'numeric' }) }) : t('backup.none')}</p>
         <div class="actions start"><button type="button" class="btn primary" id="bkDownload">${t('backup.download')}</button><button type="button" class="btn" id="bkRestore">${t('backup.restore')}</button></div>
         <div id="restoreConfirm" hidden></div>
       </div>
@@ -103,6 +105,15 @@ function showRestoreConfirm(): void {
 }
 
 const fileStamp = () => todayISO();
+const todayISOFrom = (ms: number) => todayISO(new Date(ms));
+
+/** Downloads a full backup and remembers when, for the backup reminder. */
+export function downloadBackup(): void {
+  app.data.settings.lastBackupAt = Date.now();
+  app.data.settings.backupSnoozeUntil = null;
+  download(`tare-backup-${fileStamp()}.json`, toBackupJSON(app.data), 'application/json');
+  commit(t('backup.downloaded'));
+}
 const slug = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'profile';
 
 export function bindProfile(): void {
@@ -140,10 +151,7 @@ export function bindProfile(): void {
     });
   });
 
-  $('#bkDownload').addEventListener('click', () => {
-    download(`tare-backup-${fileStamp()}.json`, toBackupJSON(app.data), 'application/json');
-    toast(t('backup.downloaded'));
-  });
+  $('#bkDownload').addEventListener('click', downloadBackup);
   $('#bkRestore').addEventListener('click', async () => {
     const file = await pickTextFile('.json,application/json');
     if (!file) return;

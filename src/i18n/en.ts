@@ -13,6 +13,7 @@ export const en = {
   'app.offlineReady': 'Tare now works offline',
   'app.saveFailed': "Couldn't save your last change. Download a backup under Profile & goal.",
   'app.importedLegacy': 'Your entries from the earlier version of Tare were moved over',
+  'app.synced': 'Updated with changes from another Tare window',
 
   'header.install': 'Install app',
   'header.profile': 'Profile',
@@ -311,6 +312,12 @@ export const en = {
   'backup.importedUpdated': ', updated {n}',
   'backup.importedSkipped': ', skipped {n} rows',
   'backup.importNone': 'No usable weigh-ins found in that file.',
+  'backup.remindNever': "<b>You haven't made a backup yet.</b> Tare keeps your data only on this device, so a backup is your only copy if something happens to it.",
+  'backup.remindStale': { one: '<b>Your last backup was {n} day ago.</b> Download a fresh one to keep your recent weigh-ins safe.', other: '<b>Your last backup was {n} days ago.</b> Download a fresh one to keep your recent weigh-ins safe.' },
+  'backup.later': 'Later',
+  'backup.last': 'Last backup: {date}.',
+  'backup.none': 'No backup yet.',
+  'backup.ios': "On iPhone and iPad, Safari deletes a website's data if you don't open it for 7 days. Add Tare to your Home Screen (Share → Add to Home Screen) so that doesn't happen, and keep downloading backups.",
 
   'error.notBackup': 'This file is not a Tare backup. Choose the .json file you exported.',
   'error.newerVersion': 'This backup comes from a newer version of Tare. Update the app and try again.',

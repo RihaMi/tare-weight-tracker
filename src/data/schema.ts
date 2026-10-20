@@ -54,10 +54,14 @@ export interface Settings {
   autoLockMinutes: number;                          // lock again after the app was hidden this long; 0 = immediately
   reminder: { enabled: boolean; time: string };     // "HH:MM", local time
   badge: BadgeMode;                                 // what the installed app's icon shows
+  quickLog: boolean;                                // open the log dialog when today has no weigh-in yet
+  lastBackupAt: number | null;                      // ms since epoch of the last full backup download
+  backupSnoozeUntil: number | null;                 // "Later" on the backup reminder hides it until then
 }
 
 export const defaultSettings = (): Settings => ({
   lang: 'auto', theme: 'auto', pin: null, autoLockMinutes: 1, reminder: { enabled: false, time: '07:30' }, badge: 'off',
+  quickLog: true, lastBackupAt: null, backupSnoozeUntil: null,
 });
 
 export interface AppData {
@@ -146,6 +150,9 @@ function cleanSettings(v: unknown): Settings {
     autoLockMinutes: lock != null && lock >= 0 && lock <= 60 ? lock : d.autoLockMinutes,
     reminder: { enabled: reminder?.enabled === true, time },
     badge: o.badge === 'remaining' || o.badge === 'reminder' ? o.badge : 'off',
+    quickLog: o.quickLog !== false,
+    lastBackupAt: num(o.lastBackupAt),
+    backupSnoozeUntil: num(o.backupSnoozeUntil),
   };
 }
 

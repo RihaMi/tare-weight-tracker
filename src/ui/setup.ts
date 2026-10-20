@@ -1,4 +1,4 @@
-import { app, commit, go } from '../app';
+import { app, commit, go, unit as profileUnit } from '../app';
 import { blankProfile, newId, type Lang, type Sex, type Unit } from '../data/schema';
 import { t, type Key } from '../i18n';
 import { addDays, fmtDate, todayISO } from '../lib/dates';
@@ -56,7 +56,7 @@ export function shouldOfferSetup(): boolean {
 export function openSetup(opts: { firstRun: boolean }): void {
   firstRun = opts.firstRun;
   step = 1;
-  draft = { name: '', unit: app.data.unit, sex: 'f', birthYear: null, heightCm: null, weightKg: null, goalKg: null, goalDate: null };
+  draft = { name: '', unit: profileUnit(), sex: 'f', birthYear: null, heightCm: null, weightKg: null, goalKg: null, goalDate: null };
   if (firstRun) markSeen();
   draw();
   dialog().showModal();
@@ -191,7 +191,7 @@ function bind(): void {
 }
 
 function finish(then: 'overview' | 'profile'): void {
-  const p = blankProfile(draft.name || t(app.data.profiles.some(x => !x.sample) ? 'profile.newName' : 'profile.defaultName'));
+  const p = blankProfile(draft.name || t(app.data.profiles.some(x => !x.sample) ? 'profile.newName' : 'profile.defaultName'), draft.unit);
   p.sex = draft.sex;
   p.birthYear = draft.birthYear;
   p.heightCm = draft.heightCm;

@@ -29,7 +29,8 @@ interface AppState {
 export const app = {} as AppState;
 
 export const profile = (): Profile => app.data.profiles.find(p => p.id === app.data.activeId) ?? app.data.profiles[0];
-export const unit = (): Unit => app.data.unit;
+/** The active profile's unit. */
+export const unit = (): Unit => profile().unit;
 
 /** Saves, re-renders, and optionally confirms with a toast. Call after every change to app.data. */
 export function commit(message?: string): void {

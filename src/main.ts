@@ -73,12 +73,33 @@ function render(): void {
   updateBadge();
 }
 
+/**
+ * Quick log: open the entry form once a day when the active profile has no
+ * weigh-in for today. Remembered per device so reloading doesn't reopen it.
+ */
+const QUICK_KEY = 'tare.quickLogDay';
+function maybeQuickLog(): void {
+  const p = profile(), today = todayISO();
+  if (!app.data.settings.quickLog || p.sample || !p.entries.length || p.entries.some(e => e.date === today)) return;
+  if (isLocked() || $<HTMLDialogElement>('#entryDlg').open) return;
+  try { if (localStorage.getItem(QUICK_KEY) === today) return; localStorage.setItem(QUICK_KEY, today); } catch { /* still open it once now */ }
+  openEntry();
+}
+
+/** Opened from the app icon's "Log weight" shortcut (?action=log). */
+function handleLaunchAction(): void {
+  const params = new URLSearchParams(location.search);
+  if (params.get('action') !== 'log') return;
+  history.replaceState(null, '', location.pathname + '#' + app.tab);
+  openEntry();
+}
+
 let hiddenAt = 0;
 function lockNow(): void {
   $<HTMLDialogElement>('#entryDlg').close();
   $('#view').innerHTML = '';
   $('#profileSel').innerHTML = '';
-  showLock(render);
+  showLock(() => { render(); maybeQuickLog(); });
 }
 
 /** Locks again after Tare has been in the background for the chosen time. */
@@ -95,7 +116,7 @@ function setupAutoLock(): void {
   });
   document.addEventListener('visibilitychange', () => {
     // Coming back after a while: refresh the reminder banner and badge.
-    if (!document.hidden && !isLocked() && !$<HTMLDialogElement>('#entryDlg').open) render();
+    if (!document.hidden && !isLocked() && !$<HTMLDialogElement>('#entryDlg').open) { render(); maybeQuickLog(); }
   });
 }
 
@@ -250,6 +271,8 @@ async function start(): Promise<void> {
   const afterUnlock = () => {
     render();
     if (imported) toast(t('app.importedLegacy'));
+    const fromShortcut = new URLSearchParams(location.search).get('action') === 'log';
+    if (fromShortcut) handleLaunchAction(); else maybeQuickLog();
   };
   if (app.data.settings.pin) showLock(afterUnlock); else afterUnlock();
   if (import.meta.env.PROD) setupUpdates();

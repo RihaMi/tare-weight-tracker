@@ -35,12 +35,17 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
+        // The app's identity once installed. It resolves to the same address as start_url, as before.
+        id: './',
         name: 'Tare Weight Tracker',
         short_name: 'Tare',
         description: 'Track your weight, goal pace, calories and body measurements. Your data stays on your device.',
         start_url: '.',
         scope: '.',
         display: 'standalone',
+        lang: 'en',
+        dir: 'ltr',
+        categories: ['health', 'fitness', 'lifestyle'],
         background_color: '#EDF0EF',
         theme_color: '#2446D6',
         icons: [
@@ -50,6 +55,12 @@ export default defineConfig({
         ],
         // Long-press the installed app's icon (Android, Windows, macOS) to jump straight to logging.
         // The manifest has one language; the name is kept short and the form itself is translated.
+        // Shown in the install dialog (Chrome shows a larger one with them). Retake with `npm run screenshots`.
+        screenshots: [
+          { src: 'screenshots/phone-overview.png', sizes: '412x839', type: 'image/png', form_factor: 'narrow', label: 'Overview: current weight, goal pace and trend' },
+          { src: 'screenshots/phone-history.png', sizes: '412x839', type: 'image/png', form_factor: 'narrow', label: 'History: weekly averages, milestones and every weigh-in' },
+          { src: 'screenshots/wide-overview.png', sizes: '1280x800', type: 'image/png', form_factor: 'wide', label: 'Overview on a computer' },
+        ],
         shortcuts: [
           { name: 'Log weight', short_name: 'Log weight', url: './?action=log', icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png' }] },
         ],
@@ -57,6 +68,8 @@ export default defineConfig({
       workbox: {
         // Fonts are precached too, so the app looks right offline from the first visit.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // The install dialog's screenshots are only needed online.
+        globIgnores: ['screenshots/**'],
       },
     }),
   ],

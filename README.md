@@ -71,6 +71,11 @@ The same command runs the layout check, `scripts/visual-audit.js`, on every scre
 
 On every pull request, GitHub Actions runs the unit tests, the browser tests and Lighthouse. Lighthouse must score 100 for accessibility and at least 90 for best practices. Its report is saved with the run. Dependabot opens weekly pull requests for package and GitHub Actions updates.
 
+**Screenshot tests** (`e2e/screens.spec.ts`) compare each screen with a reference image, at desktop and phone size and in dark mode, with the clock fixed to one day so the example data looks the same every run. Fonts render differently on each operating system, so the references are made on Linux and compared only there; on Windows and macOS these tests are skipped.
+
+- **If a change is meant to look different**, update the references: put `[update screenshots]` in a commit message, or run **Update screenshots** from the Actions tab on your branch. The workflow commits the new images to the branch. Its own commit doesn't start the other checks, so push again (or re-run them) afterwards.
+- **When they fail**, the report saved with the run shows the expected image, the actual one, and the difference.
+
 ### Adding a language
 
 1. Copy `src/i18n/cs.ts` to a new file (for example `de.ts`) and translate every value. Keep the `{placeholders}` and give plural entries the forms the language needs (`one`, `few`, `many`, `other`).

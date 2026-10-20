@@ -34,8 +34,9 @@
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-/* Dark: when the device is dark (unless Light is chosen in the app), or when Dark is chosen in the app. */
-@media (prefers-color-scheme: dark) {
+/* Dark: when the device is dark (unless Light is chosen in the app), or when Dark is chosen in the app.
+   On screen only: a printout always uses the light colours above. */
+@media screen and (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0B100F; --surface: #141B19; --surface-2: #1A2220; --ink: #E7EDEB; --muted: #8E9C98; --line: #29332F;
     --accent: #8099FF; --accent-ink: #0B100F; --accent-soft: rgba(128, 153, 255, .14);
@@ -47,15 +48,17 @@
     color-scheme: dark;
   }
 }
-:root[data-theme="dark"] {
-  --bg: #0B100F; --surface: #141B19; --surface-2: #1A2220; --ink: #E7EDEB; --muted: #8E9C98; --line: #29332F;
-  --accent: #8099FF; --accent-ink: #0B100F; --accent-soft: rgba(128, 153, 255, .14);
-  --good: #4CC48B; --warn: #E3B344; --bad: #F2766B;
-  --good-fill: #4CC48B; --warn-fill: #E3B344; --bad-fill: #F2766B;
-  --good-soft: rgba(76, 196, 139, .14); --warn-soft: rgba(227, 179, 68, .14); --bad-soft: rgba(242, 118, 107, .14);
-  --c-protein: #8099FF; --c-fat: #C38BEB; --c-carbs: #3CC7B5; --c-bmr: #5D6B67; --c-activity: #8099FF;
-  --shadow: 0 1px 2px rgba(0, 0, 0, .3);
-  color-scheme: dark;
+@media screen {
+  :root[data-theme="dark"] {
+    --bg: #0B100F; --surface: #141B19; --surface-2: #1A2220; --ink: #E7EDEB; --muted: #8E9C98; --line: #29332F;
+    --accent: #8099FF; --accent-ink: #0B100F; --accent-soft: rgba(128, 153, 255, .14);
+    --good: #4CC48B; --warn: #E3B344; --bad: #F2766B;
+    --good-fill: #4CC48B; --warn-fill: #E3B344; --bad-fill: #F2766B;
+    --good-soft: rgba(76, 196, 139, .14); --warn-soft: rgba(227, 179, 68, .14); --bad-soft: rgba(242, 118, 107, .14);
+    --c-protein: #8099FF; --c-fat: #C38BEB; --c-carbs: #3CC7B5; --c-bmr: #5D6B67; --c-activity: #8099FF;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    color-scheme: dark;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -519,3 +522,15 @@ dialog form { padding: 20px; }
 /* On phones the message sits above the bottom tab bar. This has to come after the .toast rule above, or that rule wins. */
 @media (max-width: 640px) { .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* Printing (History or the statistics for a doctor, say): the screen as it is, in light colours,
+   without the controls. The profile name stays at the top. */
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { background: #fff; padding: 0; font-size: 10.5pt; }
+  .top { position: static; background: none; border-bottom: 1px solid var(--line); margin: 0 0 12px; padding: 0 0 8px; }
+  .tabs, .banner, .toast, dialog, .btn, .actions, .seg, .tip, details:not([open]) { display: none !important; }
+  select.profile-sel { border: 0; background: none; padding: 0; font-size: 1.1rem; max-width: none; }
+  .card { box-shadow: none; break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+}

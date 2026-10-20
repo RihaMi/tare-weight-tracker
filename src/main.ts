@@ -25,6 +25,7 @@ import { initLock, isLocked, showLock } from './ui/lock';
 import { applyTheme } from './ui/theme';
 import { isPastTime } from './lib/ics';
 import { todayISO } from './lib/dates';
+import { parseLogLink } from './lib/logLink';
 import { resolveLang, setLang, t, tn, translateStatic, type Key } from './i18n';
 import type { SampleText } from './data/sample';
 import { en } from './i18n/en';
@@ -97,11 +98,19 @@ function maybeQuickLog(): void {
 }
 
 /** Opened from the app icon's "Log weight" shortcut (?action=log). */
+/** True when the app was opened to log a weight: the icon shortcut (?action=log) or a link with a weight (?log=84.2). */
+const launchedToLog = (): boolean => {
+  const params = new URLSearchParams(location.search);
+  return params.get('action') === 'log' || params.has('log');
+};
+
 function handleLaunchAction(): void {
   const params = new URLSearchParams(location.search);
-  if (params.get('action') !== 'log') return;
+  const linked = parseLogLink(params, app.data.unit, todayISO());
+  // Drop the link from the address bar, so a reload or bookmark can't log it twice.
   history.replaceState(null, '', location.pathname + '#' + app.tab);
-  openEntry();
+  if (linked === null) toast(t('link.invalid'));
+  openEntry(null, false, linked ?? undefined);
 }
 
 /**
@@ -324,8 +333,7 @@ async function start(): Promise<void> {
   const afterUnlock = () => {
     render();
     if (imported) toast(t('app.importedLegacy'));
-    const fromShortcut = new URLSearchParams(location.search).get('action') === 'log';
-    if (fromShortcut) handleLaunchAction(); else maybeQuickLog();
+    if (launchedToLog()) handleLaunchAction(); else maybeQuickLog();
   };
   if (locked) showLock(afterUnlock, { length: locked.pinLength, verify: pin => unlockEncrypted(pin, locked) });
   else if (app.data.settings.pin) showLock(afterUnlock, { verify: unlockLoaded });

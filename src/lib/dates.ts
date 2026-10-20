@@ -21,5 +21,6 @@ export function fmtDate(s: string, o: Intl.DateTimeFormatOptions = { day: 'numer
   return toD(s).toLocaleDateString(formatLocale(), { ...o, timeZone: 'UTC' });
 }
 
+/** A real calendar date as YYYY-MM-DD. Rejects dates like 2026-02-30, which Date would quietly roll over to March. */
 export const isISODate = (s: unknown): s is string =>
-  typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(toD(s).getTime());
+  typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(toD(s).getTime()) && iso(toD(s)) === s;

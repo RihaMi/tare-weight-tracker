@@ -114,7 +114,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 function makeISO(y: number, m: number, d: number): string | null {
   if (y < 100) y += y > (new Date().getFullYear() % 100) + 1 ? 1900 : 2000;
   const s = `${y}-${pad(m)}-${pad(d)}`;
-  return isISODate(s) && new Date(s + 'T00:00:00Z').getUTCDate() === d ? s : null;
+  return isISODate(s) ? s : null;
 }
 
 function timeOf(s: string): { rest: string; time?: string } {

@@ -67,6 +67,8 @@ export const en = {
   'reminder.log': 'Log weight',
 
   'entry.title': 'Log weight',
+  'entry.confirmTitle': 'Save this weigh-in?',
+  'link.invalid': "The link's weight or date couldn't be read, so nothing was filled in.",
   'entry.editTitle': 'Edit weigh-in',
   'entry.date': 'Date',
   'entry.note': 'Note',

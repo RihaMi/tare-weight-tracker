@@ -65,6 +65,8 @@ export const cs: Record<Key, string | Plural> = {
   'reminder.log': 'Zapsat váhu',
 
   'entry.title': 'Zapsat váhu',
+  'entry.confirmTitle': 'Uložit toto vážení?',
+  'link.invalid': 'Váhu nebo datum z odkazu se nepodařilo přečíst, nic se nevyplnilo.',
   'entry.editTitle': 'Upravit vážení',
   'entry.date': 'Datum',
   'entry.note': 'Poznámka',

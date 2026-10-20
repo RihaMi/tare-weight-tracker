@@ -6,6 +6,7 @@
 //   - the page scrolling sideways
 //   - elements sticking out of the screen
 //   - text cut off by its box
+//   - text covered by another element, or drawn across a coloured shape (bar, badge, button)
 //   - text below WCAG AA contrast (4.5:1, or 3:1 for large text)
 // Repeat at different window sizes, in light and dark mode, and in each language.
 
@@ -36,10 +37,13 @@ window.tareAudit = async function tareAudit(opts = {}) {
   const desc = el => (el.id ? '#' + el.id : el.tagName.toLowerCase()) +
     (typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : '');
 
+  const visible = el => { const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > 0 && !el.closest('[hidden]'); };
   const out = {};
   for (const tab of opts.tabs ?? ['overview', 'history', 'body', 'calories', 'profile']) {
     if (tab !== 'current') { location.hash = tab; await wait(450); }
     const vw = document.documentElement.clientWidth, issues = new Set();
+    // Coloured shapes (bars, badges, buttons): text drawn across one that isn't its own background is hard to read.
+    const shapes = [...document.querySelectorAll('#view *')].filter(e => visible(e) && (parse(getComputedStyle(e).backgroundColor)?.a ?? 0) > 0.1);
     if (document.documentElement.scrollWidth > vw + 1) issues.add(`PAGE SCROLLS SIDEWAYS (${document.documentElement.scrollWidth}px > ${vw}px)`);
     for (const el of document.querySelectorAll('body *')) {
       if (el.closest('[hidden], svg, script, style, noscript')) continue;
@@ -52,6 +56,29 @@ window.tareAudit = async function tareAudit(opts = {}) {
       const ownText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
       if (!ownText) continue;
       if (!inScroller && el.scrollWidth > el.clientWidth + 1 && cs.overflowX !== 'visible') issues.add(`text cut off: ${desc(el)} "${el.textContent.trim().slice(0, 40)}"`);
+      // Covered: another element is painted on top of this text.
+      // Tested where the text itself is drawn (not the element's whole box).
+      if (!el.closest('.tabs, .top, dialog, .lock') && cs.pointerEvents !== 'none') {
+        el.scrollIntoView({ block: 'center', inline: 'nearest' });
+        for (const node of el.childNodes) {
+          if (node.nodeType !== 3 || !node.textContent.trim()) continue;
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          for (const tr of range.getClientRects()) {
+            for (const s of shapes) {
+              if (s === el || s.contains(el) || el.contains(s)) continue;
+              const sr = s.getBoundingClientRect();
+              const ix = Math.min(tr.right, sr.right) - Math.max(tr.left, sr.left), iy = Math.min(tr.bottom, sr.bottom) - Math.max(tr.top, sr.top);
+              if (ix > 0 && iy > 0 && (ix * iy) / (tr.width * tr.height) > 0.15) issues.add(`text overlaps a shape: ${desc(el)} "${node.textContent.trim().slice(0, 30)}" over ${desc(s)}`);
+            }
+            const top = document.elementFromPoint(tr.left + tr.width / 2, tr.top + tr.height / 2);
+            // Invisible click targets (opacity 0, e.g. over custom radio cards) don't hide anything.
+            if (top && top !== el && !el.contains(top) && !top.contains(el) && +getComputedStyle(top).opacity > 0) {
+              issues.add(`covered text: ${desc(el)} "${node.textContent.trim().slice(0, 30)}" under ${desc(top)}`);
+            }
+          }
+        }
+      }
       if (el.tagName === 'OPTION' || el.closest('.faint')) continue;
       const fg = parse(cs.color);
       if (!fg) continue;
@@ -60,6 +87,13 @@ window.tareAudit = async function tareAudit(opts = {}) {
       const size = parseFloat(cs.fontSize), bold = +cs.fontWeight >= 700;
       const need = size >= 24 || (bold && size >= 18.66) ? 3 : 4.5;
       if (ratio < need) issues.add(`low contrast ${ratio.toFixed(2)} (needs ${need}): ${desc(el)} "${el.textContent.trim().slice(0, 30)}"`);
+    }
+    // Fixed bars and pop-ups (tab bar, messages) must not sit on top of each other.
+    const fixed = [...document.querySelectorAll('body *')].filter(e => visible(e) && getComputedStyle(e).position === 'fixed' && e.getBoundingClientRect().height > 0);
+    for (let i = 0; i < fixed.length; i++) for (let j = i + 1; j < fixed.length; j++) {
+      const a = fixed[i].getBoundingClientRect(), b = fixed[j].getBoundingClientRect();
+      if (fixed[i].contains(fixed[j]) || fixed[j].contains(fixed[i])) continue;
+      if (Math.min(a.right, b.right) > Math.max(a.left, b.left) && Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top)) issues.add(`fixed elements overlap: ${desc(fixed[i])} and ${desc(fixed[j])}`);
     }
     out[tab] = [...issues];
   }

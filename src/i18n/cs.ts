@@ -453,6 +453,8 @@ export const cs: Record<Key, string | Plural> = {
   'profile.suggestNote': 'Podle Devineova vzorce pro vaši výšku a postavu, v rámci zdravého BMI. Při stálém tempu 0,5 kg týdně to potrvá asi {weeks} týdnů, do {date}. Návrh uložíte tlačítkem Uložit profil.',
   'store.indexeddb': 'Uloženo v tomto zařízení, v tomto prohlížeči.',
   'store.localstorage': 'Uloženo v tomto zařízení, v tomto prohlížeči (základní úložiště).',
+  'store.kept': 'Prohlížeč data nesmaže, ani když bude docházet místo.',
+  'store.notKept': 'Když v zařízení dojde místo, prohlížeč může data smazat.',
   'store.memory': 'Tento prohlížeč aplikaci Tare nedovolí nic uložit, takže záznamy po zavření stránky zmizí. Před odchodem si stáhněte zálohu.',
   'backup.title': 'Záloha a data',
   'backup.intro': 'Nic se neodesílá na server. Občas si stáhněte zálohu, a vždy před smazáním dat prohlížeče nebo přechodem na jiné zařízení.',

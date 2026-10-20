@@ -34,6 +34,7 @@ function hero(p: Profile, r: Stats): string {
       <div class="ruler-track"><div class="ruler-ticks"></div><div class="ruler-bar"></div><div class="ruler-fill" style="width:${pct}%"></div><div class="ruler-mark" style="left:${pct}%"></div></div>
       <div class="ruler-labels"><span>${t('overview.start')} <b>${fmtW(r.start, u)}</b></span><span>${t('overview.there', { pct })}</span><span>${t('common.goal')} <b>${fmtW(p.goalKg, u)}</b></span></div>
     </div>` : `<p class="note">${t('overview.setGoal', { link: profileLink() })}</p>`}
+    ${r.E.length > 1 ? `<div class="actions start hero-share"><button type="button" class="btn small-btn" data-act="share">${t('share.button')}</button></div>` : ''}
   </section>`;
 }
 

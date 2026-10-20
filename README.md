@@ -38,7 +38,8 @@ You need [Node.js](https://nodejs.org/) 22 or newer.
 ```bash
 npm install        # once
 npm run dev        # local dev server at http://localhost:5173
-npm test           # run the tests
+npm test           # run the unit tests
+npm run e2e        # browser tests on the production build (run npm run build first)
 npm run build      # production build into dist/
 npm run preview    # serve the production build at http://localhost:4173
 ```
@@ -59,9 +60,13 @@ public/        icons (regenerate with `npm run icons`)
 .github/       CI: type-check, tests and build on every push
 ```
 
-### Checking the layout
+### Browser tests and checks
 
-`scripts/visual-audit.js` checks every screen for sideways scrolling, elements sticking out of the screen, cut-off text and text contrast below WCAG AA. Run `npm run build` and `npm run preview`, paste the script into the browser console, then run `await tareAudit()`. Repeat at phone, tablet and desktop widths, in light and dark mode, and in each language. An empty list for every screen means it passed.
+`npm run e2e` runs Playwright tests in Chromium, at desktop and phone size. They cover logging a weight, switching units, the PIN lock, CSV import, Czech, and offline use. First run `npx playwright install chromium` once, and `npm run build` before each run.
+
+The same command runs the layout check, `scripts/visual-audit.js`, on every screen. It runs at 320, 414, 768 and 1440 px wide, in light and dark mode, in English and Czech. It looks for sideways scrolling, elements off the screen, cut-off or covered text, text drawn across a bar or badge, and contrast below WCAG AA. You can also paste the script into the browser console and run `await tareAudit()`.
+
+On every pull request, GitHub Actions runs the unit tests, the browser tests and Lighthouse. Lighthouse must score 100 for accessibility and at least 90 for best practices. Its report is saved with the run. Dependabot opens weekly pull requests for package and GitHub Actions updates.
 
 ### Adding a language
 

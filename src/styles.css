@@ -437,7 +437,7 @@ dialog form { padding: 20px; }
 .empty .reading { margin: 0; }
 .toast {
   position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); opacity: 0;
-  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: .9rem; transition: .25s; pointer-events: none; z-index: 50;
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: .9rem; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 50;
   max-width: calc(100vw - 32px); text-align: center;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }

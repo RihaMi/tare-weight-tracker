@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { fileURLToPath } from 'node:url';
 
 // Runs scripts/visual-audit.js on every screen: text cut off, covered or

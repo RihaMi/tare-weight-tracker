@@ -1,6 +1,7 @@
 import type { Entry, Profile } from '../data/schema';
 import { addDays, daysBetween } from './dates';
 import { CM_IN, caloriePlanFor, idealKg } from './health';
+import { maintenance, type Maintenance } from './insights';
 
 export { idealKg, bmiCategory, BMI_CATS } from './health';
 
@@ -21,6 +22,8 @@ export interface Stats {
   remaining?: number;    // goal − current (signed)
   progress?: number;     // 0..1
   reached?: boolean;
+  /** Once the goal has been reached: staying there. */
+  maintenance?: Maintenance | null;
   planPerDay: number;    // planned kg/day from first weigh-in to goal date
   needPerDay?: number;   // kg/day still needed to hit the goal date
   daysLeft?: number;
@@ -70,6 +73,7 @@ export function calc(p: Profile, now = new Date()): Stats {
     r.remaining = goal! - last.kg;
     r.progress = Math.min(1, Math.max(0, (last.kg - first.kg) / (goal! - first.kg)));
     r.reached = r.dir * r.remaining <= 0;
+    r.maintenance = maintenance(E, goal!);
   }
 
   // Recent pace: the last three weeks of entries.
@@ -126,9 +130,11 @@ export function quality(prev: Entry | undefined, e: Entry, planPerDay: number): 
   return 'bad';
 }
 
-export type PaceCode = 'reached' | 'on' | 'behind' | 'away';
+export type PaceCode = 'reached' | 'on' | 'behind' | 'away' | 'maintaining' | 'outside';
 export function paceState(r: Stats): { cls: 'good' | 'warn' | 'bad'; code: PaceCode } | null {
   if (!r.hasGoal || r.E.length < 2) return null;
+  // Once the goal has been reached, the question is whether the trend stays near it.
+  if (r.maintenance) return r.maintenance.inBand ? { cls: 'good', code: 'maintaining' } : { cls: 'warn', code: 'outside' };
   if (r.reached) return { cls: 'good', code: 'reached' };
   const toward = (r.recentPerDay ?? 0) * r.dir;
   const need = Math.abs(r.needPerDay ?? r.planPerDay);

@@ -361,7 +361,16 @@ main { padding-top: 20px; display: grid; gap: 16px; }
 .ms-list.compact { margin-top: 12px; border-top: 1px solid var(--line); }
 .ms-list.compact li:first-child { border-top: 0; }
 .ms-dot { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); transform: rotate(45deg); }
-.ms-dot.goal { background: var(--good-fill); }
+.ms-dot.goal, .ms-dot.maintain { background: var(--good-fill); }
+/* Maintenance: the range around the goal as the middle third of a bar, the trend as a marker. */
+.maint-range { margin-top: 14px; display: grid; gap: 6px; }
+.maintain-track { position: relative; height: 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); }
+.maintain-band { position: absolute; left: 33.3%; width: 33.4%; top: 0; bottom: 0; background: var(--good-soft); border-left: 2px solid var(--good-fill); border-right: 2px solid var(--good-fill); }
+.maintain-mark { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--good-fill); border: 2px solid var(--surface); transform: translate(-50%, -50%); }
+.maintain-mark.out { background: var(--warn-fill); }
+/* The range's edges, under the edges of the band. */
+.maint-labels { position: relative; height: 1.3em; font-size: .78rem; color: var(--muted); font-family: var(--f-mono); }
+.maint-labels span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
 .ms-dot.bmi { background: var(--c-carbs); }
 .ms-dot.progress { background: var(--c-fat); }
 .week-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
@@ -469,6 +478,8 @@ dialog {
 }
 dialog::backdrop { background: rgba(8, 14, 12, .45); backdrop-filter: blur(3px); }
 dialog form { padding: 20px; }
+.setup-dlg .form { gap: 14px; }
+.setup-dlg .seg { margin-top: 6px; }
 .share-body { padding: 20px; display: grid; gap: 12px; }
 .share-img { display: block; width: auto; max-width: 100%; height: auto; max-height: min(56dvh, 600px); margin: 0 auto; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); aspect-ratio: 4 / 5; }
 .hero-share { margin-top: 14px; }

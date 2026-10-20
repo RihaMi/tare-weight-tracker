@@ -1,0 +1,37 @@
+name: Update screenshots
+
+# Makes the reference screenshots for e2e/screens.spec.ts on Linux, the same
+# system the browser tests run on, and commits them to the branch.
+# Run it from the Actions tab, or put "[update screenshots]" in a commit message.
+
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[update screenshots]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npx playwright test e2e/screens.spec.ts --update-snapshots
+      - name: Commit the screenshots
+        run: |
+          git add e2e/screens.spec.ts-snapshots
+          if git diff --cached --quiet; then echo "Screenshots unchanged"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update screenshots"
+          git push

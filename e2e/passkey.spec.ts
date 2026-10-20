@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 
 // Unlocking with Face ID or a fingerprint (a passkey with the PRF extension).
 // Chrome's virtual authenticator stands in for the device's biometric sensor

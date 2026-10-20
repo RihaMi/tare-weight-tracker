@@ -20,6 +20,7 @@ import { backupNudge } from './lib/backupNudge';
 import { announceSaved, initTabSync } from './ui/sync';
 import { keyInfoFor, newKeyInfo, seal, unseal, type Envelope } from './lib/crypto';
 import { verifyPin } from './lib/pin';
+import { initPasskeySupport } from './lib/passkey';
 import { migrate } from './data/schema';
 import { resetSettingsForm } from './ui/views/settings';
 import { updateBadge } from './ui/badge';
@@ -387,6 +388,7 @@ async function start(): Promise<void> {
   app.render = render;
   if (!data && !locked) void app.persist(app.data); // first run only: never write over encrypted data
   void navigator.storage?.persist?.();
+  void initPasskeySupport().then(() => { if (app.tab === 'profile') render(); });
   // Fonts used to come from Google and were cached separately; they're part of the app now.
   void globalThis.caches?.delete('google-fonts').catch(() => {});
   initEntryDialog();

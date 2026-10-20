@@ -4,6 +4,20 @@ import { expect, test, type Page } from '@playwright/test';
 
 const toast = (page: Page) => page.locator('#toast');
 
+// Every test runs with the app's security policy on; anything it blocks fails the test.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as unknown as { cspBlocked: string[] }).cspBlocked = [];
+    document.addEventListener('securitypolicyviolation', e =>
+      (window as unknown as { cspBlocked: string[] }).cspBlocked.push(`${e.violatedDirective}: ${e.blockedURI}`));
+  });
+});
+test.afterEach(async ({ page }) => {
+  if (page.isClosed() || page.url() === 'about:blank') return;
+  const blocked = await page.evaluate(() => (window as unknown as { cspBlocked?: string[] }).cspBlocked ?? []).catch(() => []);
+  expect(blocked, 'blocked by the security policy').toEqual([]);
+});
+
 /** Opens a screen once the app is ready offline, so the "works offline" message can't replace the one a test checks. */
 async function open(page: Page, path: string) {
   await page.goto(path);

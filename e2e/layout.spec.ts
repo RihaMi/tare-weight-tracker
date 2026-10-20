@@ -7,6 +7,9 @@ import { fileURLToPath } from 'node:url';
 const audit = fileURLToPath(new URL('../scripts/visual-audit.js', import.meta.url));
 const widths = [320, 414, 768, 1440];
 
+// The audit is injected as an inline script, which the app's security policy rightly blocks.
+test.use({ bypassCSP: true });
+
 for (const colorScheme of ['light', 'dark'] as const) {
   for (const locale of ['en-US', 'cs-CZ']) {
     test.describe(`${colorScheme}, ${locale}`, () => {

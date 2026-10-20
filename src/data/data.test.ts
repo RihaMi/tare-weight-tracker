@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { mergeEntries, parseBackup, parseCSV, restoredData, toBackupJSON, toCSV } from './backup';
+import { mergeEntries, parseBackup, restoredData, toBackupJSON, toCSV } from './backup';
+import { guessUnit, parseAnyCSV, toEntries } from './importers';
 import { DataError, SCHEMA_VERSION, defaultSettings, migrate, type Profile } from './schema';
 import { sampleProfile } from './sample';
 
@@ -86,6 +87,12 @@ describe('backup files', () => {
     expect(() => parseBackup('weight,date')).toThrow(/not a Tare backup/);
   });
 });
+
+/** Import a CSV the way the app does, accepting the suggested unit. */
+const parseCSV = (text: string) => {
+  const p = parseAnyCSV(text), r = toEntries(p, guessUnit(p));
+  return { entries: r.entries, skipped: p.skipped + r.outOfRange };
+};
 
 describe('CSV', () => {
   const p: Profile = migrate(v1).profiles[0];

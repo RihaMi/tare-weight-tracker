@@ -27,7 +27,8 @@ It was inspired by the iOS app *Monitor Your Weight* and rebuilt with a cleaner,
 - **App icon badge.** On an installed app, the icon can show the weight left to your goal, or a dot until today's weigh-in.
 - **English and Czech.** Chosen automatically from the browser, or set under Profile & goal → App settings. Numbers and dates follow the language (84.1 kg / 84,1 kg).
 - **Multiple profiles** and **units**: kg, lb, or stones and pounds, with cm or inches.
-- **Backup and restore.** A full backup file (.json), plus CSV export and import for spreadsheets or data from other apps.
+- **Backup and restore.** A full backup file (.json), plus CSV export for spreadsheets.
+- **Import from other apps.** Reads a CSV from almost any weight app, such as Monitor Your Weight. It finds the date and weight columns, the date order and the unit on its own. It can also read an Apple Health export (`export.zip`), even one of several hundred MB. A preview shows what will be added before anything is saved.
 - **Installable and offline.** A Progressive Web App you can add to your home screen. It works without internet.
 - **Light and dark mode.** Automatic (follows your device) by default, or pick Light or Dark under Profile & goal → App settings → Appearance.
 

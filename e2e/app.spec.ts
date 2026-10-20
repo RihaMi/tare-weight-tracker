@@ -120,6 +120,20 @@ test('keeps working offline once loaded', async ({ page, context }) => {
   await expect(page.locator('#view .card').first()).toBeVisible();
 });
 
+test('offline too, opens the parts loaded only when first used: sharing and importing', async ({ page, context }) => {
+  await page.goto('/');
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload();
+  await context.setOffline(true);
+  await page.reload();
+  await page.locator('[data-act=share]').click();
+  await expect(page.locator('#shareImg')).toBeVisible();
+  await page.locator('#shareClose').click();
+  await page.goto('/#profile');
+  await pickImport(page, 'weights.csv', 'date,weight_kg\n2020-01-01,90.5\n');
+  await expect(page.locator('#importConfirm')).toContainText('1 weigh-in');
+});
+
 test('makes a progress picture to download, without weights unless asked', async ({ page }) => {
   await open(page, '/');
   await page.locator('[data-act=share]').click();

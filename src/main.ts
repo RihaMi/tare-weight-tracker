@@ -6,6 +6,7 @@ import { sampleProfile } from './data/sample';
 import { blankProfile, freshData, type Unit } from './data/schema';
 import { createSaver, loadData, openStore } from './data/storage';
 import { showStartupProblem } from './ui/startup';
+import { autoBackupState, initAutoBackup, resumeAutoBackup, scheduleAutoBackup } from './ui/autoBackup';
 import { drawChart } from './ui/chart';
 import { $, esc, toast } from './ui/dom';
 import { initEntryDialog, openEntry } from './ui/entryDialog';
@@ -97,6 +98,11 @@ function setupErrorBar(): void {
 }
 
 function backupBanner(): string {
+  const auto = autoBackupState();
+  if (auto.kind === 'paused') {
+    return `<div class="banner backup"><span>${t('autobackup.pausedBanner', { folder: esc(auto.folder) })}</span>
+      <button class="btn primary" data-act="resumeAutoBackup">${t('autobackup.resume')}</button></div>`;
+  }
   const n = backupNudge(app.data);
   if (!n) return '';
   const text = n.kind === 'never' ? t('backup.remindNever') : tn('backup.remindStale', n.days);
@@ -260,6 +266,7 @@ function bindGlobalEvents(): void {
       case 'newProfile': newProfile(); break;
       case 'toggleWeeks': toggleWeeks(); render(); break;
       case 'backupNow': downloadBackup(); break;
+      case 'resumeAutoBackup': void resumeAutoBackup().then(ok => toast(t(ok ? 'autobackup.resumed' : 'autobackup.notAllowed'))); break;
       case 'retrySave': void app.persist(app.data); break;
       case 'backupLater':
         app.data.settings.backupSnoozeUntil = Date.now() + 7 * 864e5;
@@ -379,7 +386,8 @@ async function start(): Promise<void> {
   applyLanguage();
   applyTheme(app.data.settings.theme);
   // With a PIN (and its key, once unlocked) every save is encrypted.
-  const save = createSaver(store, () => setSaveFailed(true), d => (d.settings.pin && app.key ? seal(d, app.key) : d), () => setSaveFailed(false));
+  const save = createSaver(store, () => setSaveFailed(true), d => (d.settings.pin && app.key ? seal(d, app.key) : d), () => { setSaveFailed(false); scheduleAutoBackup(); });
+  void initAutoBackup(() => render());
   app.persist = d => save(d).then(announceSaved);
   const h = location.hash.slice(1);
   app.tab = isTab(h) ? h : 'overview';

@@ -18,6 +18,7 @@ It was inspired by the iOS app *Monitor Your Weight* and rebuilt with a cleaner,
 - **Body measurements.** Waist, hips, chest, neck, upper arm and thigh, with trend lines and waist-to-height ratio.
 - **History.** Every weigh-in by month. A colored dot shows whether that day was on pace (green), slower (amber) or moved away from the goal (red).
 - **Motivation.** Weekly averages that smooth out water swings, daily and weekly logging streaks, and milestones (every 5 kg / 10 lb / 1 st, 25/50/75 % of the goal, reaching the goal, moving into a better BMI category). Logging a weight that reaches a milestone says so.
+- **Events.** Mark medication, a holiday, an illness, exercise or a diet change. Each shows on the chart as a band, and History compares the trend before and since.
 - **Share your progress.** A picture of your change, trend, pace and latest milestone to save or send. It leaves weights off unless you turn them on, and it is made on your device.
 - **Patterns.** Spots plateaus (the trend flat for two weeks or more) and which days of the week you tend to weigh more, and explains both.
 - **Quick log.** If you haven't weighed in today, the log form opens by itself when you open Tare (once a day; can be turned off). On an installed app, long-press the icon and choose **Log weight**.

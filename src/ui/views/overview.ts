@@ -48,7 +48,8 @@ function chartCard(r: Stats): string {
     <div class="card-head"><h2>${t('chart.title')}</h2>
       <div class="seg" role="group" aria-label="${esc(t('chart.range'))}">${RANGES.map(([d, l]) => `<button type="button" data-range="${d}" aria-pressed="${app.chartRange === d}">${t(l)}</button>`).join('')}</div></div>
     <div class="chart-box" id="chartBox"></div>
-    <div class="legend"><span><i></i>${t('chart.trend')}</span><span><i class="dot"></i>${t('chart.daily')}</span>${r.hasGoal ? `<span><i class="dash"></i>${t('common.goal')}</span>` : ''}</div>
+    <div class="legend"><span><i></i>${t('chart.trend')}</span><span><i class="dot"></i>${t('chart.daily')}</span>${r.hasGoal ? `<span><i class="dash"></i>${t('common.goal')}</span>` : ''}${profile().events.length ? `<span><i class="ev"></i>${t('chart.event')}</span>` : ''}
+      <button type="button" class="btn ghost small-btn legend-act" data-act="addEvent">${t('events.addShort')}</button></div>
     <details class="chart-table" ${chartTableOpen ? 'open' : ''}><summary>${t('chart.table')}</summary><div class="table-wrap" id="chartTable"></div></details>
   </section>`;
 }

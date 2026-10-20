@@ -25,6 +25,9 @@ async function started(page: Page, path = '/') {
   await page.goto(path);
   await expect(page.locator('#view .card').first()).toBeVisible();
   await expect.poll(() => stored(page)).toBeTruthy(); // the first run has saved the example
+  // Let the first-run "works offline" message pass, so it can't replace one a test checks.
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await expect(page.locator('#toast')).not.toHaveClass(/show/, { timeout: 6000 });
 }
 
 test.describe('saved data that can not be used', () => {

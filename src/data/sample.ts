@@ -14,7 +14,7 @@ function mulberry(seed: number): () => number {
   };
 }
 
-export interface SampleText { name: string; notes: Record<number, string> }
+export interface SampleText { name: string; notes: Record<number, string>; events: { away: string; runs: string } }
 
 const ENGLISH: SampleText = {
   name: 'Alex (example)',
@@ -22,6 +22,7 @@ const ENGLISH: SampleText = {
     0: 'Day one. Weighed after waking up.', 9: 'Swapped soda for sparkling water', 23: 'Weekend away, lots of restaurant food',
     41: 'Back to morning runs', 64: 'Stalled this week, kept going anyway', 88: 'Birthday dinner', 110: 'Jeans fit loose now',
   },
+  events: { away: 'Weekend away', runs: 'Morning runs' },
 };
 
 export function sampleProfile(today = todayISO(), text: SampleText = ENGLISH): Profile {
@@ -49,5 +50,9 @@ export function sampleProfile(today = todayISO(), text: SampleText = ENGLISH): P
   return {
     id: 'sample', sample: true, name: text.name, sex: 'm', birthYear: new Date().getFullYear() - 38, heightCm: 180,
     frame: 'medium', activity: 1.375, goalKg: 80, goalDate: addDays(today, 110), entries, updatedAt: now,
+    events: [
+      { id: 'sample_ev_away', kind: 'holiday', label: text.events.away, start: addDays(start, 22), end: addDays(start, 24), updatedAt: now },
+      { id: 'sample_ev_runs', kind: 'training', label: text.events.runs, start: addDays(start, 41), end: null, updatedAt: now },
+    ],
   };
 }

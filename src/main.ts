@@ -9,6 +9,7 @@ import { showStartupProblem } from './ui/startup';
 import { drawChart } from './ui/chart';
 import { $, esc, toast } from './ui/dom';
 import { initEntryDialog, openEntry } from './ui/entryDialog';
+import { openEvent } from './ui/eventDialog';
 import { openShare } from './ui/shareCard';
 import { bodyView } from './ui/views/body';
 import { bindCalories, caloriesView, resetCalories } from './ui/views/calories';
@@ -245,12 +246,15 @@ function bindGlobalEvents(): void {
       drawOverviewChart();
       return;
     }
+    const evBtn = target.closest<HTMLElement>('[data-event]');
+    if (evBtn) { openEvent(evBtn.dataset.event); return; }
     const row = target.closest<HTMLElement>('[data-edit]');
     if (row) { openEntry(row.dataset.edit); return; }
     const a = target.closest<HTMLElement>('[data-act]');
     if (!a) return;
     switch (a.dataset.act) {
       case 'log': openEntry(); break;
+      case 'addEvent': openEvent(); break;
       case 'share': void openShare(); break;
       case 'logMeas': openEntry(null, true); break;
       case 'newProfile': newProfile(); break;
@@ -317,7 +321,7 @@ function setupUpdates(): void {
 function sampleText(): SampleText {
   const notes: Record<number, string> = {};
   for (const d of [0, 9, 23, 41, 64, 88, 110]) notes[d] = t(`sample.note${d}` as Key);
-  return { name: t('sample.name'), notes };
+  return { name: t('sample.name'), notes, events: { away: t('sample.eventAway'), runs: t('sample.eventRuns') } };
 }
 
 /** Another Tare window saved: take its data, and redraw unless the user is mid-entry. */
@@ -344,6 +348,10 @@ function applyLanguage(): void {
       const d = Number(e.id.replace('sample_', ''));
       const k = Object.keys(text.notes).map(Number).find(n => Math.abs(n - d) <= 1);
       if (e.note && k != null) e.note = text.notes[k];
+    }
+    for (const ev of sample.events) {
+      if (ev.id === 'sample_ev_away') ev.label = text.events.away;
+      if (ev.id === 'sample_ev_runs') ev.label = text.events.runs;
     }
   }
 }

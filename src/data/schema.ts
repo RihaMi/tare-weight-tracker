@@ -4,7 +4,8 @@ import { isISODate } from '../lib/dates';
 // teach migrate() how to upgrade the previous version, so old data and old
 // backup files keep loading.
 // v1: original single-file app. v2: entry ids and timestamps. v3: app settings.
-export const SCHEMA_VERSION = 3;
+// v4: events on each profile (medication, holiday…).
+export const SCHEMA_VERSION = 4;
 
 export type Unit = 'kg' | 'lb' | 'st';
 export type Sex = 'f' | 'm';
@@ -25,6 +26,19 @@ export interface Entry {
   updatedAt: number;   // ms since epoch; lets a future sync pick the newest copy
 }
 
+export type EventKind = 'medication' | 'holiday' | 'illness' | 'training' | 'diet' | 'other';
+export const EVENT_KINDS: readonly EventKind[] = ['medication', 'holiday', 'illness', 'training', 'diet', 'other'];
+
+/** Something that may explain a change in the trend, marked on the chart. */
+export interface WeightEvent {
+  id: string;
+  kind: EventKind;
+  label: string;        // short, e.g. "Started Wegovy", "Holiday in Crete"
+  start: string;        // YYYY-MM-DD
+  end: string | null;   // YYYY-MM-DD, or null while it's still going / for a one-off change
+  updatedAt: number;
+}
+
 export interface Profile {
   id: string;
   name: string;
@@ -36,6 +50,7 @@ export interface Profile {
   goalKg: number | null;
   goalDate: string | null;
   entries: Entry[];
+  events: WeightEvent[]; // oldest first
   sample?: boolean;
   updatedAt: number;
 }
@@ -78,7 +93,7 @@ export const newId = (prefix = ''): string =>
 export function blankProfile(name = 'Me'): Profile {
   return {
     id: newId('p_'), name, sex: 'f', birthYear: null, heightCm: null, frame: 'medium', activity: 1.375,
-    goalKg: null, goalDate: null, entries: [], updatedAt: Date.now(),
+    goalKg: null, goalDate: null, entries: [], events: [], updatedAt: Date.now(),
   };
 }
 
@@ -110,6 +125,20 @@ function cleanEntry(v: unknown, now: number): Entry | null {
   return e;
 }
 
+function cleanEvent(v: unknown, now: number): WeightEvent | null {
+  const o = obj(v);
+  if (!o || !isISODate(o.start) || typeof o.label !== 'string' || !o.label.trim()) return null;
+  const end = isISODate(o.end) && o.end >= o.start ? o.end : null;
+  return {
+    id: typeof o.id === 'string' && o.id ? o.id : newId('ev_'),
+    kind: EVENT_KINDS.includes(o.kind as EventKind) ? (o.kind as EventKind) : 'other',
+    label: o.label.trim().slice(0, 60),
+    start: o.start,
+    end,
+    updatedAt: num(o.updatedAt) ?? now,
+  };
+}
+
 function cleanProfile(v: unknown, now: number): Profile | null {
   const o = obj(v);
   if (!o) return null;
@@ -128,6 +157,9 @@ function cleanProfile(v: unknown, now: number): Profile | null {
     goalKg: num(o.goalKg),
     goalDate: isISODate(o.goalDate) ? o.goalDate : null,
     entries: [...byDate.values()].sort((a, b) => (a.date < b.date ? -1 : 1)),
+    // Before v4 there were no events.
+    events: (Array.isArray(o.events) ? o.events : []).map(e => cleanEvent(e, now)).filter((e): e is WeightEvent => !!e)
+      .sort((a, b) => (a.start < b.start ? -1 : 1)),
     updatedAt: num(o.updatedAt) ?? now,
   };
   if (o.sample === true) p.sample = true;

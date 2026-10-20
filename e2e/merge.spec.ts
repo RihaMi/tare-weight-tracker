@@ -24,9 +24,10 @@ test('a backup from another device merges in, keeping what is only here, and can
   backup.profiles[0].entries.push({ id: 'other-device', date: '2026-10-03', kg: 79.2, updatedAt: Date.now() + 1000 });
 
   // Meanwhile, here: another weigh-in the backup doesn't have.
+  // Still on #profile: going there again would reload the page in WebKit.
   await log(page, '2026-10-02', '79.6');
+  await expect(page).toHaveURL(/#profile$/);
 
-  await page.goto('/#profile');
   const chooser = page.waitForEvent('filechooser');
   await page.locator('#bkRestore').click();
   await (await chooser).setFiles({ name: 'other-device.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });

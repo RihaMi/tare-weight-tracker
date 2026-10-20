@@ -27,6 +27,8 @@ const ENGLISH: SampleText = {
 
 export function sampleProfile(today = todayISO(), text: SampleText = ENGLISH): Profile {
   const span = 126, start = addDays(today, -span), rnd = mulberry(11), entries: Entry[] = [];
+  // A separate sequence for the smart-scale readings, so the weights stay the same as before they existed.
+  const scale = mulberry(23);
   const notes = text.notes;
   const used = new Set<number>();
   const now = Date.now();
@@ -44,6 +46,13 @@ export function sampleProfile(today = todayISO(), text: SampleText = ENGLISH): P
         neck: +(40.5 - 1.6 * f).toFixed(1), arm: +(34 - 1.2 * f).toFixed(1), thigh: +(60 - 3.5 * f).toFixed(1),
       };
     }
+    // Smart-scale readings: body fat slowly down, muscle nearly steady, with the day-to-day noise such scales have.
+    const f = d / span, noise = () => scale() - 0.5;
+    e.composition = {
+      fatPct: +(30.5 - 4.4 * f + noise() * 1.2).toFixed(1),
+      muscleKg: +(59 - 0.6 * f + noise() * 0.8).toFixed(1),
+      waterPct: +(51.5 + 1.8 * f + noise() * 1).toFixed(1),
+    };
     entries.push(e);
     d += 1 + Math.floor(rnd() * 2.6);
   }

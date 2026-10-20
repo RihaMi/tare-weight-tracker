@@ -11,7 +11,7 @@ const profile = (e: Entry[], sample = false): Profile => ({
   goalKg: null, goalDate: null, entries: e, events: [], goalSteps: [], updatedAt: 0, ...(sample ? { sample: true } : {}),
 });
 const data = (profiles: Profile[], s: Partial<AppData['settings']> = {}): AppData =>
-  ({ version: 5, unit: 'kg', activeId: profiles[0].id, profiles, settings: { ...defaultSettings(), ...s } });
+  ({ version: 6, unit: 'kg', activeId: profiles[0].id, profiles, settings: { ...defaultSettings(), ...s } });
 
 describe('backup reminder', () => {
   it('waits for real data: none for the example profile or a handful of entries', () => {

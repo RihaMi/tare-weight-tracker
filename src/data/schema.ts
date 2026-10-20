@@ -5,7 +5,8 @@ import { isISODate } from '../lib/dates';
 // backup files keep loading.
 // v1: original single-file app. v2: entry ids and timestamps. v3: app settings.
 // v4: events on each profile (medication, holiday…). v5: goal steps on each profile.
-export const SCHEMA_VERSION = 5;
+// v6: body composition (body fat, muscle, water) on weigh-ins.
+export const SCHEMA_VERSION = 6;
 
 export type Unit = 'kg' | 'lb' | 'st';
 export type Sex = 'f' | 'm';
@@ -17,12 +18,20 @@ export const MEASURES: ReadonlyArray<readonly [MeasureKey, string]> = [
   ['waist', 'Waist'], ['hips', 'Hips'], ['chest', 'Chest'], ['neck', 'Neck'], ['arm', 'Upper arm'], ['thigh', 'Thigh'],
 ];
 
+/** What a smart scale measures besides weight. Any of them may be missing. */
+export interface Composition {
+  fatPct?: number;    // body fat, % of weight
+  muscleKg?: number;  // muscle mass
+  waterPct?: number;  // body water, % of weight
+}
+
 export interface Entry {
   id: string;
   date: string;      // YYYY-MM-DD
   kg: number;
   note?: string;
   measures?: Measures; // centimetres
+  composition?: Composition;
   updatedAt: number;   // ms since epoch; lets a future sync pick the newest copy
 }
 
@@ -117,6 +126,18 @@ function cleanMeasures(v: unknown): Measures | undefined {
   return Object.keys(out).length ? out : undefined;
 }
 
+/** Keeps only believable values: body fat 2–75 %, muscle up to the weight itself, water 20–85 %. */
+export function cleanComposition(v: unknown, kg: number): Composition | undefined {
+  const o = obj(v);
+  if (!o) return undefined;
+  const out: Composition = {};
+  const fat = num(o.fatPct), muscle = num(o.muscleKg), water = num(o.waterPct);
+  if (fat != null && fat >= 2 && fat <= 75) out.fatPct = fat;
+  if (muscle != null && muscle >= 5 && muscle < kg) out.muscleKg = muscle;
+  if (water != null && water >= 20 && water <= 85) out.waterPct = water;
+  return Object.keys(out).length ? out : undefined;
+}
+
 function cleanEntry(v: unknown, now: number): Entry | null {
   const o = obj(v);
   if (!o || !isISODate(o.date)) return null;
@@ -126,6 +147,9 @@ function cleanEntry(v: unknown, now: number): Entry | null {
   if (typeof o.note === 'string' && o.note.trim()) e.note = o.note.trim().slice(0, 500);
   const m = cleanMeasures(o.measures);
   if (m) e.measures = m;
+  // Before v6 there was no body composition.
+  const c = cleanComposition(o.composition, kg);
+  if (c) e.composition = c;
   return e;
 }
 

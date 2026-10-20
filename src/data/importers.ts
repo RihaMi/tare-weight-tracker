@@ -1,7 +1,7 @@
 import { daysBetween, isISODate } from '../lib/dates';
 import { LB } from '../lib/units';
 import { parseCSVRows } from './backup';
-import { DataError, MEASURES, newId, type Entry, type Measures } from './schema';
+import { DataError, MEASURES, cleanComposition, newId, type Entry, type Measures } from './schema';
 
 // Bringing weigh-ins in from other apps. Every app exports differently, so
 // instead of one fixed format this works out which column holds the date and
@@ -17,6 +17,10 @@ export interface ImportRow {
   time?: string;             // HH:MM, used to keep the first weigh-in of a day
   note?: string;
   measures?: Measures;
+  fatPct?: number;               // body fat, %
+  muscle?: number;               // muscle mass, in `muscleUnit` (or the weight's unit)
+  muscleUnit?: WeightUnit | null;
+  waterPct?: number;             // body water, %
 }
 
 export interface ImportPreview {
@@ -50,6 +54,9 @@ export function toEntries(p: ImportPreview, unit: WeightUnit, now = Date.now()):
     const e: Entry = { id: newId('e_'), date: r.date, kg: Math.round(kg * 100) / 100, updatedAt: now };
     if (r.note) e.note = r.note;
     if (r.measures) e.measures = r.measures;
+    const muscleKg = r.muscle != null ? r.muscle * TO_KG[r.muscleUnit ?? r.unit ?? unit] : undefined;
+    const c = cleanComposition({ fatPct: r.fatPct, muscleKg: muscleKg != null ? Math.round(muscleKg * 10) / 10 : undefined, waterPct: r.waterPct }, e.kg);
+    if (c) e.composition = c;
     entries.push(e);
   }
   return { entries, outOfRange };
@@ -201,6 +208,18 @@ const DATE_HEAD = /^(date|day|datum|den|time|timestamp|date ?time|datetime|when|
 const WEIGHT_HEAD = /weight|w[aá]ha|hmotnost|mass|^kg$|^lbs?$|^kilo|^pounds?$|^value$|^hodnota$/;
 const NOT_WEIGHT = /goal|target|c[ií]l|change|diff|delta|zm[eě]n|trend|bmi|fat|tuk|lean|muscle|sval|water|voda|bone|kost|avg|average|pr[ůu]m[eě]r|ideal|start|min|max/;
 const NOTE_HEAD = /note|comment|memo|pozn[aá]mk|koment/;
+// Smart-scale columns. Body fat and water as a percentage (not "fat mass" in kg); muscle as a weight (not a %).
+const FAT_HEAD = /body.?fat|fat.?%|^fat$|fat.?\(%|fat.?pct|bodyfat|t[eě]lesn[yý].?tuk|^tuk/;
+const MUSCLE_HEAD = /muscle|sval/;
+const WATER_HEAD = /water|voda|hydrat/;
+const ALSO_MASS = /mass|hmot|kg|lb/;
+const PERCENT = /%|pct|percent|rate|pod[ií]l/;
+/** A percentage, also when written as a fraction (0.24). */
+const pct = (s: string): number | undefined => {
+  const v = parseFloat(s.replace(',', '.').replace('%', ''));
+  if (!isFinite(v) || v <= 0) return undefined;
+  return v < 1 ? v * 100 : v;
+};
 const UNIT_HEAD = /^(unit|units|jednotka|jednotky)$/;
 
 /** Weigh-ins from a CSV: Tare's own export, or any app's with a date and a weight column. */
@@ -233,6 +252,11 @@ export function parseAnyCSV(text: string, preferMDY = false): ImportPreview {
   const ui = head.findIndex(h => UNIT_HEAD.test(h));
   const ni = body === rows ? -1 : head.findIndex(h => NOTE_HEAD.test(h));
   const mi = MEASURES.map(([k]) => [k, head.indexOf(`${k}_cm`)] as const).filter(([, i]) => i >= 0);
+  const noHead = body === rows;
+  const fi = noHead ? -1 : head.findIndex((h, i) => i !== wi && FAT_HEAD.test(h) && !ALSO_MASS.test(h.replace(/%|pct/g, '')));
+  const musI = noHead ? -1 : head.findIndex((h, i) => i !== wi && MUSCLE_HEAD.test(h) && !PERCENT.test(h));
+  const wai = noHead ? -1 : head.findIndex((h, i) => i !== wi && WATER_HEAD.test(h) && !/kg|lb|mass/.test(h));
+  const muscleUnit = musI >= 0 ? unitFromText(head[musI]) : null;
   // Some apps put the time of day in a column of its own.
   const ti = body === rows ? -1 : head.findIndex((h, i) => i !== di && /^(time|time of day|[čc]as)$/.test(h));
   const dates = parseDates(body.map(r => (r[di] ?? '') + (ti >= 0 && r[ti] ? ' ' + r[ti] : '')), preferMDY);
@@ -249,6 +273,12 @@ export function parseAnyCSV(text: string, preferMDY = false): ImportPreview {
     const m: Measures = {};
     for (const [k, idx] of mi) { const v = parseFloat((r[idx] ?? '').replace(',', '.')); if (isFinite(v) && v > 0) m[k] = v; }
     if (Object.keys(m).length) row.measures = m;
+    if (fi >= 0) row.fatPct = pct(r[fi] ?? '');
+    if (wai >= 0) row.waterPct = pct(r[wai] ?? '');
+    if (musI >= 0) {
+      const mw = parseWeight(r[musI] ?? '');
+      if (mw) { row.muscle = mw.value; row.muscleUnit = mw.unit ?? muscleUnit; }
+    }
     out.push(row);
   });
   // Rows that carry no unit of their own take the header's; when every labelled row agrees, that's the file's unit too.
@@ -262,6 +292,7 @@ export function parseAnyCSV(text: string, preferMDY = false): ImportPreview {
 // ---- Apple Health ----
 
 const BODY_MASS = 'HKQuantityTypeIdentifierBodyMass';
+const BODY_FAT = 'HKQuantityTypeIdentifierBodyFatPercentage';
 const HEALTH_UNITS: Record<string, [WeightUnit, number]> = { kg: ['kg', 1], lb: ['lb', 1], st: ['st', 1], g: ['kg', 0.001] };
 
 const attr = (tag: string, name: string): string | undefined => tag.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1];
@@ -274,6 +305,7 @@ const unescapeXML = (s: string) => s.replace(/&quot;/g, '"').replace(/&apos;/g, 
 export async function parseHealthXML(stream: ReadableStream<string>): Promise<ImportPreview> {
   const reader = stream.getReader();
   const out: ImportRow[] = [];
+  const fatByDate = new Map<string, { time: string; pct: number }>(); // body fat, the earliest reading of each day
   const sources = new Map<string, number>();
   let buf = '', skipped = 0, sawHealth = false;
   const take = (upTo: number) => {
@@ -281,6 +313,16 @@ export async function parseHealthXML(stream: ReadableStream<string>): Promise<Im
     if (!sawHealth && part.includes('<HealthData')) sawHealth = true;
     for (const m of part.matchAll(/<Record\s[^>]*>/g)) {
       const tag = m[0];
+      if (tag.includes(BODY_FAT) && attr(tag, 'type') === BODY_FAT) {
+        const start = attr(tag, 'startDate') ?? '', v = parseFloat(attr(tag, 'value') ?? '');
+        const date = start.slice(0, 10), time = start.slice(11, 16);
+        // Health stores body fat as a fraction (0.24).
+        if (isISODate(date) && isFinite(v) && v > 0) {
+          const prev = fatByDate.get(date);
+          if (!prev || time < prev.time) fatByDate.set(date, { time, pct: v <= 1 ? v * 100 : v });
+        }
+        continue;
+      }
       if (!tag.includes(BODY_MASS) || attr(tag, 'type') !== BODY_MASS) continue;
       const u = HEALTH_UNITS[attr(tag, 'unit') ?? ''];
       const v = parseFloat(attr(tag, 'value') ?? '');
@@ -304,6 +346,7 @@ export async function parseHealthXML(stream: ReadableStream<string>): Promise<Im
   take(buf.length);
   if (!sawHealth) throw new DataError('notHealth', 'This is not an Apple Health export.');
   const one = onePerDay(out);
+  for (const r of one.rows) { const f = fatByDate.get(r.date); if (f) r.fatPct = Math.round(f.pct * 10) / 10; }
   const units = new Set(one.rows.map(r => r.unit));
   return {
     source: 'health', rows: one.rows, unit: units.size === 1 ? [...units][0] : 'kg', skipped, sameDay: one.sameDay,

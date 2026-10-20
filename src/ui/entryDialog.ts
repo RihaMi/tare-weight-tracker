@@ -1,11 +1,11 @@
 import { app, commit, profile, unit } from '../app';
-import { MEASURES, newId, type Entry, type Measures } from '../data/schema';
+import { MEASURES, cleanComposition, newId, type Entry, type Measures } from '../data/schema';
 import { calc, sortedEntries } from '../lib/calc';
 import { newMilestones } from '../lib/insights';
 import { milestoneLabel, milestonesFor } from './views/insights';
 import { todayISO } from '../lib/dates';
 import type { LinkedWeighIn } from '../lib/logLink';
-import { CM_IN, disp, fmtW, fromDisp, isMetric, splitStone } from '../lib/units';
+import { CM_IN, deltaUnit, disp, fmtW, fromDisp, isMetric, splitStone } from '../lib/units';
 import { $, armOrRun } from './dom';
 import { t } from '../i18n';
 import { measureLabel } from './views/body';
@@ -53,6 +53,12 @@ export function openEntry(date?: string | null, focusMeasures = false, linked?: 
     return `<label class="f">${l} (${isMetric(u) ? 'cm' : 'in'})<input id="m_${k}" type="number" inputmode="decimal" step="0.1" min="1" value="${v != null ? (isMetric(u) ? v : (v / CM_IN).toFixed(1)) : ''}"></label>`;
   }).join('');
   $<HTMLDetailsElement>('#eMeasDetails').open = focusMeasures || !!ex?.measures;
+  const c = ex?.composition;
+  $('#eComp').innerHTML = `
+    <label class="f">${t('comp.fat')} (%)<input id="cFat" type="number" inputmode="decimal" step="0.1" min="2" max="75" value="${c?.fatPct ?? ''}"></label>
+    <label class="f">${t('comp.muscle')} (${deltaUnit(u)})<input id="cMuscle" type="number" inputmode="decimal" step="0.1" min="5" value="${c?.muscleKg != null ? disp(c.muscleKg, u).toFixed(1) : ''}"></label>
+    <label class="f">${t('comp.water')} (%)<input id="cWater" type="number" inputmode="decimal" step="0.1" min="20" max="85" value="${c?.waterPct ?? ''}"></label>`;
+  $<HTMLDetailsElement>('#eCompDetails').open = !!c;
   const del = $<HTMLButtonElement>('#eDelete');
   del.hidden = !ex; del.dataset.armed = ''; del.classList.remove('armed'); del.textContent = t('entry.delete');
   checkExists();
@@ -91,6 +97,10 @@ function submit(ev: SubmitEvent): void {
   const note = $<HTMLTextAreaElement>('#eNote').value.trim();
   if (note) e.note = note.slice(0, 500);
   if (Object.keys(measures).length) e.measures = measures;
+  const field = (id: string) => { const v = parseFloat($<HTMLInputElement>('#' + id).value); return isFinite(v) ? v : undefined; };
+  const muscle = field('cMuscle');
+  const comp = cleanComposition({ fatPct: field('cFat'), muscleKg: muscle != null ? +fromDisp(muscle, u).toFixed(1) : undefined, waterPct: field('cWater') }, e.kg);
+  if (comp) e.composition = comp;
   p.entries.push(e);
   p.entries.sort((a, b) => (a.date < b.date ? -1 : 1));
   p.updatedAt = Date.now();

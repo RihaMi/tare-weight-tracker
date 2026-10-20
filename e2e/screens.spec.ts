@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 
 // Screenshot comparison of each screen, to catch visual changes the layout
 // check can't (a colour, spacing or chart change). Fonts render differently on

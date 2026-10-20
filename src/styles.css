@@ -147,7 +147,6 @@ select.profile-sel {
   .tabs a { flex: 1; text-align: center; padding: 13px 2px 14px; font-size: .8rem; border-bottom: 0; border-top: 2px solid transparent; }
   .tabs a[aria-current="page"] { border-top-color: var(--accent); }
   .tabs .long { display: none; }
-  .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
 }
 
 main { padding-top: 20px; display: grid; gap: 16px; }
@@ -220,12 +219,14 @@ main { padding-top: 20px; display: grid; gap: 16px; }
 .legend i.dash { border-top: 1.5px dashed var(--good); }
 
 /* BMI scale */
-.bmi-wrap { position: relative; }
-.bmi-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; margin: 26px 0 6px; }
+/* The marker's value sits in its own space above the bar (padding, not the bar's margin, which would collapse through the wrapper). */
+.bmi-wrap { position: relative; padding-top: 1.6rem; margin-top: .5rem; }
+.bmi-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; margin: 0 0 6px; }
 .bmi-bar span { height: 100%; }
 .tone-good { background: var(--good-fill); } .tone-warn { background: var(--warn-fill); } .tone-bad { background: var(--bad-fill); }
-.bmi-pin { position: absolute; top: -2px; transform: translateX(-50%); display: grid; justify-items: center; font-family: var(--f-mono); font-size: .78rem; font-weight: 600; }
-.bmi-pin::after { content: ""; width: 2px; height: 22px; background: var(--ink); margin-top: 2px; }
+.bmi-pin { position: absolute; top: 0; z-index: 1; transform: translateX(-50%); display: grid; justify-items: center; font-family: var(--f-mono); font-size: .78rem; font-weight: 600; line-height: 1; }
+/* The pointer runs from under the value to the bottom edge of the bar, not into the scale labels. */
+.bmi-pin::after { content: ""; width: 2px; height: calc(1.6rem - .78rem - 2px + 10px); background: var(--ink); margin-top: 2px; }
 .bmi-scale { display: flex; justify-content: space-between; font-size: .72rem; color: var(--muted); font-family: var(--f-mono); }
 .kv { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; margin: 14px 0 0; font-size: .92rem; }
 .kv.narrow { max-width: 520px; }
@@ -423,4 +424,6 @@ dialog form { padding: 20px; }
   max-width: calc(100vw - 32px); text-align: center;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+/* On phones the message sits above the bottom tab bar. This has to come after the .toast rule above, or that rule wins. */
+@media (max-width: 640px) { .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

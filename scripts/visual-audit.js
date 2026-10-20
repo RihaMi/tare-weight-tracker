@@ -37,7 +37,9 @@ window.tareAudit = async function tareAudit(opts = {}) {
   const desc = el => (el.id ? '#' + el.id : el.tagName.toLowerCase()) +
     (typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : '');
 
-  const visible = el => { const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > 0 && !el.closest('[hidden]'); };
+  // The inside of a closed <details> isn't shown, but the browser still reports a position for it.
+  const inClosedDetails = el => { const d = el.closest('details'); return !!d && !d.open && !el.closest('summary'); };
+  const visible = el => { const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > 0 && !el.closest('[hidden]') && !inClosedDetails(el); };
   const out = {};
   for (const tab of opts.tabs ?? ['overview', 'history', 'body', 'calories', 'profile']) {
     if (tab !== 'current') { location.hash = tab; await wait(450); }
@@ -46,7 +48,7 @@ window.tareAudit = async function tareAudit(opts = {}) {
     const shapes = [...document.querySelectorAll('#view *')].filter(e => visible(e) && (parse(getComputedStyle(e).backgroundColor)?.a ?? 0) > 0.1);
     if (document.documentElement.scrollWidth > vw + 1) issues.add(`PAGE SCROLLS SIDEWAYS (${document.documentElement.scrollWidth}px > ${vw}px)`);
     for (const el of document.querySelectorAll('body *')) {
-      if (el.closest('[hidden], svg, script, style, noscript, .sr-only')) continue;
+      if (el.closest('[hidden], svg, script, style, noscript, .sr-only') || inClosedDetails(el)) continue;
       const cs = getComputedStyle(el);
       if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) continue;
       const r = el.getBoundingClientRect();

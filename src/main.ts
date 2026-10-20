@@ -22,6 +22,7 @@ import { resetSettingsForm } from './ui/views/settings';
 import { updateBadge } from './ui/badge';
 import { initLock, isLocked, showLock } from './ui/lock';
 import { applyTheme } from './ui/theme';
+import { commitWithUndo, initUndoShortcut } from './ui/undo';
 import { isPastTime } from './lib/ics';
 import { todayISO } from './lib/dates';
 import { resolveLang, setLang, t, tn, translateStatic, type Key } from './i18n';
@@ -215,13 +216,24 @@ function bindGlobalEvents(): void {
         app.data.settings.backupSnoozeUntil = Date.now() + 7 * 864e5;
         commit();
         break;
-      case 'clearSample':
-        app.data.profiles = app.data.profiles.filter(p => !p.sample);
-        if (!app.data.profiles.length) app.data.profiles.push(blankProfile(t('profile.defaultName')));
+      case 'clearSample': {
+        const before = app.data.profiles, wasActive = app.data.activeId;
+        const removed = before.filter(p => p.sample);
+        app.data.profiles = before.filter(p => !p.sample);
+        const filler = app.data.profiles.length ? null : blankProfile(t('profile.defaultName'));
+        if (filler) app.data.profiles.push(filler);
         app.data.activeId = app.data.profiles[0].id;
         resetCalories();
-        commit(t('sample.removed'));
+        commitWithUndo(t('sample.removed'), () => {
+          if (app.data.profiles.some(p => p.sample)) return false;
+          if (filler) app.data.profiles = app.data.profiles.filter(x => x.id !== filler.id || x.entries.length);
+          for (const p of removed) app.data.profiles.splice(Math.min(before.indexOf(p), app.data.profiles.length), 0, p);
+          app.data.activeId = app.data.profiles.some(p => p.id === wasActive) ? wasActive : app.data.profiles[0].id;
+          resetCalories();
+          return true;
+        });
         break;
+      }
     }
   });
   $('#entryDlg').addEventListener('close', () => { if (renderWhenDialogCloses) { renderWhenDialogCloses = false; render(); } });
@@ -314,6 +326,7 @@ async function start(): Promise<void> {
   void navigator.storage?.persist?.();
   initEntryDialog();
   initLock();
+  initUndoShortcut();
   bindGlobalEvents();
   initTabSync(onExternalChange, env => lockNow(env));
   setupInstall();

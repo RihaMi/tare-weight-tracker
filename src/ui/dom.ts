@@ -3,15 +3,46 @@ export const $ = <T extends Element = HTMLElement>(sel: string, root: ParentNode
 const ESC: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc = (s: unknown): string => String(s ?? '').replace(/[&<>"']/g, c => ESC[c]);
 
+export interface ToastAction { label: string; hint: string; run: () => void }
+
 let toastTimer: number | undefined;
-/** Shows a short message. Screen readers get it from a separate status region, since the visible one is hidden between messages. */
-export function toast(message: string): void {
-  const t = $('#toast');
-  t.textContent = message;
-  $('#announce').textContent = message;
-  t.classList.add('show');
+let toastAction: (() => void) | null = null;
+
+function hideToast(): void {
+  $('#toast').classList.remove('show');
+  toastAction = null;
+}
+
+/**
+ * Shows a short message, optionally with a button (Undo). Screen readers get the
+ * text from a separate status region, since the visible box is hidden between
+ * messages; a box with a button is left visible to them so the button can be reached.
+ */
+export function toast(message: string, action?: ToastAction): void {
+  const box = $('#toast');
+  box.textContent = message;
+  toastAction = action?.run ?? null;
+  if (action) {
+    const b = Object.assign(document.createElement('button'), { type: 'button', className: 'toast-act', textContent: action.label });
+    b.addEventListener('click', () => runToastAction());
+    box.append(b);
+  }
+  box.classList.toggle('has-act', !!action);
+  if (action) box.removeAttribute('aria-hidden'); else box.setAttribute('aria-hidden', 'true');
+  $('#announce').textContent = action ? `${message}. ${action.hint}` : message;
+  box.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = window.setTimeout(() => t.classList.remove('show'), 2400);
+  toastTimer = window.setTimeout(hideToast, action ? 6000 : 2400);
+}
+
+/** Runs the showing message's button action, if there is one. */
+export function runToastAction(): boolean {
+  const run = toastAction;
+  if (!run) return false;
+  clearTimeout(toastTimer);
+  hideToast();
+  run();
+  return true;
 }
 
 export function download(filename: string, text: string, type: string): void {

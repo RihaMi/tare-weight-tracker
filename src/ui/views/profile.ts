@@ -12,6 +12,7 @@ import { isIOSBrowserTab } from '../../lib/backupNudge';
 import { resetCalories } from './calories';
 import { activityKey } from './overview';
 import { bindSettings, settingsCard } from './settings';
+import { commitWithUndo } from '../undo';
 import { applyTheme } from '../theme';
 
 let pendingRestore: { data: AppData; name: string } | null = null;
@@ -201,11 +202,21 @@ export function bindProfile(): void {
 
   $('#delProfile').addEventListener('click', ev => {
     armOrRun(ev.currentTarget as HTMLButtonElement, t('profile.deleteConfirm', { name: p.name }), () => {
+      const at = app.data.profiles.indexOf(p);
       app.data.profiles = app.data.profiles.filter(x => x.id !== p.id);
-      if (!app.data.profiles.length) app.data.profiles.push(blankProfile(t('profile.defaultName')));
+      // Deleting the last profile leaves an empty one in its place; Undo takes that away again if it's still empty.
+      const filler = app.data.profiles.length ? null : blankProfile(t('profile.defaultName'));
+      if (filler) app.data.profiles.push(filler);
       app.data.activeId = app.data.profiles[0].id;
       resetCalories();
-      commit(t('profile.deleted'));
+      commitWithUndo(t('profile.deleted'), () => {
+        if (app.data.profiles.some(x => x.id === p.id)) return false;
+        if (filler) app.data.profiles = app.data.profiles.filter(x => x.id !== filler.id || x.entries.length);
+        app.data.profiles.splice(Math.min(at, app.data.profiles.length), 0, p);
+        app.data.activeId = p.id;
+        resetCalories();
+        return true;
+      });
       go('overview');
     });
   });

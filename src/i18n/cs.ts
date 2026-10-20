@@ -78,7 +78,12 @@ export const cs: Record<Key, string | Plural> = {
   'entry.invalid': 'Zadejte datum a váhu mezi {min} a {max}.',
   'entry.updated': 'Vážení upraveno',
   'entry.logged': 'Zapsáno {w}',
-  'entry.deleted': 'Záznam smazán',
+  'entry.deleted': 'Vážení smazáno',
+  'undo.label': 'Zpět',
+  'undo.hint': 'Vrátit lze klávesami Ctrl+Z.',
+  'undo.hintMac': 'Vrátit lze klávesami Command+Z.',
+  'undo.done': 'Obnoveno',
+  'undo.cant': 'To už nejde vrátit.',
   'entry.milestone': 'Milník: {label}!',
 
   'measure.waist': 'Pas',

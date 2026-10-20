@@ -80,7 +80,12 @@ export const en = {
   'entry.invalid': 'Enter a date and a weight between {min} and {max}.',
   'entry.updated': 'Weigh-in updated',
   'entry.logged': 'Logged {w}',
-  'entry.deleted': 'Entry deleted',
+  'entry.deleted': 'Weigh-in deleted',
+  'undo.label': 'Undo',
+  'undo.hint': 'Press Ctrl+Z to undo.',
+  'undo.hintMac': 'Press Command+Z to undo.',
+  'undo.done': 'Restored',
+  'undo.cant': "That can't be undone any more.",
   'entry.milestone': 'Milestone: {label}!',
 
   'measure.waist': 'Waist',

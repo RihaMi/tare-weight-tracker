@@ -1,4 +1,4 @@
-import { commit, profile, unit } from '../app';
+import { app, commit, profile, unit } from '../app';
 import { MEASURES, newId, type Entry, type Measures } from '../data/schema';
 import { calc, sortedEntries } from '../lib/calc';
 import { newMilestones } from '../lib/insights';
@@ -8,6 +8,7 @@ import { CM_IN, disp, fmtW, fromDisp, isMetric, splitStone } from '../lib/units'
 import { $, armOrRun } from './dom';
 import { t } from '../i18n';
 import { measureLabel } from './views/body';
+import { commitWithUndo } from './undo';
 
 // The "Log weight" dialog, also used to edit or delete a weigh-in.
 
@@ -103,11 +104,18 @@ export function initEntryDialog(): void {
   $('#entryForm').addEventListener('submit', submit as EventListener);
   $('#eDelete').addEventListener('click', ev => {
     armOrRun(ev.currentTarget as HTMLButtonElement, t('entry.confirmDelete'), () => {
-      const p = profile();
+      const p = profile(), gone = p.entries.find(e => e.date === editing)!;
       p.entries = p.entries.filter(e => e.date !== editing);
       p.updatedAt = Date.now();
       dlg().close();
-      commit(t('entry.deleted'));
+      commitWithUndo(t('entry.deleted'), () => {
+        const owner = app.data.profiles.find(x => x.id === p.id);
+        if (!owner || owner.entries.some(e => e.date === gone.date)) return false;
+        owner.entries.push({ ...gone, updatedAt: Date.now() });
+        owner.entries.sort((a, b) => (a.date < b.date ? -1 : 1));
+        owner.updatedAt = Date.now();
+        return true;
+      });
     });
   });
 }

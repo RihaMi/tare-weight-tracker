@@ -5,6 +5,7 @@ import { app, commit, go, isTab, profile, type Tab } from './app';
 import { sampleProfile } from './data/sample';
 import { blankProfile, freshData, type Unit } from './data/schema';
 import { createSaver, loadData, openStore } from './data/storage';
+import { showStartupProblem } from './ui/startup';
 import { drawChart } from './ui/chart';
 import { $, esc, toast } from './ui/dom';
 import { initEntryDialog, openEntry } from './ui/entryDialog';
@@ -66,6 +67,34 @@ function reminderBanner(): string {
     <button class="btn primary" data-act="log">${t('reminder.log')}</button></div>`;
 }
 
+/** Stays until a save works again, so lost changes can't go unnoticed. */
+function saveBanner(): string {
+  if (!app.saveFailed) return '';
+  return `<div class="banner backup" role="alert"><span>${t('app.saveFailedBanner')}</span>
+    <span class="actions"><button class="btn" data-act="retrySave">${t('app.retrySave')}</button><button class="btn primary" data-act="backupNow">${t('backup.download')}</button></span></div>`;
+}
+
+function setSaveFailed(failed: boolean): void {
+  if (app.saveFailed === failed) return;
+  app.saveFailed = failed;
+  toast(t(failed ? 'app.saveFailed' : 'app.savedAgain'));
+  render();
+}
+
+/** A calm bar for errors nothing else handles, instead of the app quietly misbehaving. */
+function setupErrorBar(): void {
+  const show = () => { if (!document.body.classList.contains('halted')) $('#errorBar').hidden = false; };
+  window.addEventListener('error', ev => {
+    // Errors from browser extensions and harmless layout warnings aren't Tare's.
+    if (ev.filename && new URL(ev.filename, location.href).origin !== location.origin) return;
+    if (/ResizeObserver loop/.test(ev.message ?? '')) return;
+    show();
+  });
+  window.addEventListener('unhandledrejection', ev => { if ((ev.reason as Error)?.name !== 'AbortError') show(); });
+  $('#errorReload').addEventListener('click', () => location.reload());
+  $('#errorClose').addEventListener('click', () => { $('#errorBar').hidden = true; });
+}
+
 function backupBanner(): string {
   const n = backupNudge(app.data);
   if (!n) return '';
@@ -78,7 +107,7 @@ function render(): void {
   if (isLocked()) return; // never put data on the page behind the lock screen
   renderHeader();
   const view = $('#view');
-  view.innerHTML = (app.tab === 'profile' ? '' : reminderBanner() + (app.tab === 'overview' ? backupBanner() : '') + sampleBanner()) + VIEWS[app.tab]();
+  view.innerHTML = saveBanner() + (app.tab === 'profile' ? '' : reminderBanner() + (app.tab === 'overview' ? backupBanner() : '') + sampleBanner()) + VIEWS[app.tab]();
   if (app.tab === 'overview') drawOverviewChart();
   if (app.tab === 'calories') bindCalories();
   if (app.tab === 'profile') bindProfile(); else { resetSettingsForm(); resetImport(); }
@@ -222,6 +251,7 @@ function bindGlobalEvents(): void {
       case 'newProfile': newProfile(); break;
       case 'toggleWeeks': toggleWeeks(); render(); break;
       case 'backupNow': downloadBackup(); break;
+      case 'retrySave': void app.persist(app.data); break;
       case 'backupLater':
         app.data.settings.backupSnoozeUntil = Date.now() + 7 * 864e5;
         commit();
@@ -314,10 +344,20 @@ function applyLanguage(): void {
 }
 
 async function start(): Promise<void> {
+  setupErrorBar();
   const store = await openStore();
-  const { data, imported, locked } = await loadData(store);
+  const { data, imported, locked, problem } = await loadData(store);
+  if (problem) {
+    // Saved data that can't be used: stop here, so nothing is ever saved over it.
+    setLang(resolveLang('auto'));
+    translateStatic();
+    showStartupProblem(problem, store);
+    if (import.meta.env.PROD) setupUpdates(); // a newer version may be waiting
+    return;
+  }
   app.store = store;
   app.key = null;
+  app.saveFailed = false;
   app.sampleText = sampleText;
   app.applyLanguage = applyLanguage;
   setLang(resolveLang(data?.settings.lang ?? 'auto'));
@@ -326,7 +366,7 @@ async function start(): Promise<void> {
   applyLanguage();
   applyTheme(app.data.settings.theme);
   // With a PIN (and its key, once unlocked) every save is encrypted.
-  const save = createSaver(store, () => toast(t('app.saveFailed')), d => (d.settings.pin && app.key ? seal(d, app.key) : d));
+  const save = createSaver(store, () => setSaveFailed(true), d => (d.settings.pin && app.key ? seal(d, app.key) : d), () => setSaveFailed(false));
   app.persist = d => save(d).then(announceSaved);
   const h = location.hash.slice(1);
   app.tab = isTab(h) ? h : 'overview';
@@ -354,4 +394,7 @@ async function start(): Promise<void> {
   if (import.meta.env.PROD) setupUpdates();
 }
 
-void start();
+start().catch(error => {
+  try { setLang(resolveLang('auto')); translateStatic(); } catch { /* English is fine */ }
+  showStartupProblem({ kind: 'crash', error }, null);
+});

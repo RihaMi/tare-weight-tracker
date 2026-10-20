@@ -21,6 +21,8 @@ interface AppState {
   sampleText: () => SampleText;
   /** Encryption key from the PIN while unlocked; saves are encrypted with it. Null without a PIN. */
   key: KeyInfo | null;
+  /** True after a save failed, until one works again; shows a banner. */
+  saveFailed: boolean;
 }
 
 // Filled in by main.ts during start-up, before anything renders.

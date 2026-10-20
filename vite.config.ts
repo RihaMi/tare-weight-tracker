@@ -1,11 +1,36 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+
+// What the built page may load: its own files, plus the Google Fonts stylesheet and
+// font files. No inline scripts and nothing sent anywhere else. Inline styles are
+// allowed because screens set widths (bars, markers) with style attributes.
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  "img-src 'self' data: blob:",
+  "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
+  "worker-src 'self'",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ');
+
+/** Adds the security policy to the built page only; the dev server needs inline scripts for hot reload. */
+const securityPolicy = (): Plugin => ({
+  name: 'tare-csp',
+  apply: 'build',
+  transformIndexHtml: () => [{ tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: CSP }, injectTo: 'head-prepend' }],
+});
 
 export default defineConfig({
   // Relative paths so the build works from any folder or sub-path (e.g. GitHub Pages).
   base: './',
   plugins: [
+    securityPolicy(),
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],

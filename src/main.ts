@@ -1,7 +1,7 @@
 import './fonts.css';
 import './styles.css';
 import { registerSW } from 'virtual:pwa-register';
-import { app, commit, isTab, profile, type Tab } from './app';
+import { app, commit, isTab, profile, unit, type Tab } from './app';
 import { sampleProfile } from './data/sample';
 import { blankProfile, freshData, type Unit } from './data/schema';
 import { createSaver, loadData, openStore } from './data/storage';
@@ -52,7 +52,7 @@ function renderHeader(): void {
   const sel = $<HTMLSelectElement>('#profileSel');
   sel.innerHTML = app.data.profiles.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('') + `<option value="__new">${esc(t('header.newProfile'))}</option>`;
   sel.value = profile().id;
-  document.querySelectorAll<HTMLButtonElement>('#unitSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.unit === app.data.unit)));
+  document.querySelectorAll<HTMLButtonElement>('#unitSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.unit === unit())));
   document.querySelectorAll<HTMLAnchorElement>('.tabs a').forEach(a => {
     if (a.dataset.tab === app.tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
   });
@@ -60,7 +60,7 @@ function renderHeader(): void {
 
 function drawOverviewChart(): void {
   const box = document.getElementById('chartBox');
-  if (box) drawChart(box, profile(), app.data.unit, app.chartRange, document.getElementById('chartTable'));
+  if (box) drawChart(box, profile(), unit(), app.chartRange, document.getElementById('chartTable'));
 }
 
 function reminderBanner(): string {
@@ -145,7 +145,7 @@ const launchedToLog = (): boolean => {
 
 function handleLaunchAction(): void {
   const params = new URLSearchParams(location.search);
-  const linked = parseLogLink(params, app.data.unit, todayISO());
+  const linked = parseLogLink(params, unit(), todayISO());
   // Drop the link from the address bar, so a reload or bookmark can't log it twice.
   history.replaceState(null, '', location.pathname + '#' + app.tab);
   if (linked === null) toast(t('link.invalid'));
@@ -237,7 +237,9 @@ function bindGlobalEvents(): void {
   $('#unitSeg').addEventListener('click', ev => {
     const b = (ev.target as Element).closest<HTMLButtonElement>('button');
     if (!b) return;
-    app.data.unit = b.dataset.unit as Unit;
+    // The unit belongs to the active profile; new profiles start with the one used last.
+    profile().unit = app.data.unit = b.dataset.unit as Unit;
+    profile().updatedAt = Date.now();
     commit();
   });
   $('#view').addEventListener('click', ev => {
@@ -273,7 +275,7 @@ function bindGlobalEvents(): void {
         const before = app.data.profiles, wasActive = app.data.activeId;
         const removed = before.filter(p => p.sample);
         app.data.profiles = before.filter(p => !p.sample);
-        const filler = app.data.profiles.length ? null : blankProfile(t('profile.defaultName'));
+        const filler = app.data.profiles.length ? null : blankProfile(t('profile.defaultName'), app.data.unit);
         if (filler) app.data.profiles.push(filler);
         app.data.activeId = app.data.profiles[0].id;
         resetCalories();

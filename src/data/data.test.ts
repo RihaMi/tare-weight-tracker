@@ -129,3 +129,12 @@ describe('CSV', () => {
     expect(target.entries.find(e => e.date === '2026-01-01')?.id).toBe(p.entries[0].id);
   });
 });
+
+describe('units per profile', () => {
+  it('gives each profile the app-wide unit it had before, and keeps its own after', () => {
+    const old = migrate({ version: 7, unit: 'st', profiles: [{ id: 'a', name: 'A', entries: [] }, { id: 'b', name: 'B', entries: [] }] });
+    expect(old.profiles.map(p => p.unit)).toEqual(['st', 'st']);
+    const now = migrate({ version: 8, unit: 'kg', profiles: [{ id: 'a', name: 'A', unit: 'lb', entries: [] }, { id: 'b', name: 'B', unit: 'grams', entries: [] }] });
+    expect(now.profiles.map(p => p.unit)).toEqual(['lb', 'kg']);
+  });
+});

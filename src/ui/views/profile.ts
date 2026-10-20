@@ -204,7 +204,7 @@ function showImportConfirm(reading?: string): void {
     let target = profile();
     // Real weigh-ins don't belong in the example profile.
     if (target.sample) {
-      target = blankProfile(t(app.data.profiles.some(x => !x.sample) ? 'profile.newName' : 'profile.defaultName'));
+      target = blankProfile(t(app.data.profiles.some(x => !x.sample) ? 'profile.newName' : 'profile.defaultName'), unit());
       app.data.profiles.push(target);
       app.data.activeId = target.id;
       resetCalories();
@@ -327,7 +327,7 @@ export function bindProfile(): void {
       const at = app.data.profiles.indexOf(p);
       app.data.profiles = app.data.profiles.filter(x => x.id !== p.id);
       // Deleting the last profile leaves an empty one in its place; Undo takes that away again if it's still empty.
-      const filler = app.data.profiles.length ? null : blankProfile(t('profile.defaultName'));
+      const filler = app.data.profiles.length ? null : blankProfile(t('profile.defaultName'), app.data.unit);
       if (filler) app.data.profiles.push(filler);
       app.data.activeId = app.data.profiles[0].id;
       resetCalories();

@@ -7,7 +7,8 @@ import { isISODate } from '../lib/dates';
 // v4: events on each profile (medication, holiday…). v5: goal steps on each profile.
 // v6: body composition (body fat, muscle, water) on weigh-ins.
 // v7: cycle tracking and period start days on each profile.
-export const SCHEMA_VERSION = 7;
+// v8: a unit (kg / lb / st) on each profile; AppData.unit is now the one new profiles start with.
+export const SCHEMA_VERSION = 8;
 
 export type Unit = 'kg' | 'lb' | 'st';
 export type Sex = 'f' | 'm';
@@ -55,6 +56,7 @@ export interface GoalStep { id: string; kg: number; date: string | null }
 export interface Profile {
   id: string;
   name: string;
+  unit: Unit;            // how this person's weights are shown and entered
   sex: Sex;
   birthYear: number | null;
   heightCm: number | null;
@@ -106,9 +108,9 @@ export interface AppData {
 export const newId = (prefix = ''): string =>
   prefix + (globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36));
 
-export function blankProfile(name = 'Me'): Profile {
+export function blankProfile(name = 'Me', unit: Unit = 'kg'): Profile {
   return {
-    id: newId('p_'), name, sex: 'f', birthYear: null, heightCm: null, frame: 'medium', activity: 1.375,
+    id: newId('p_'), name, unit, sex: 'f', birthYear: null, heightCm: null, frame: 'medium', activity: 1.375,
     goalKg: null, goalDate: null, entries: [], events: [], goalSteps: [], cycleTracking: false, periodStarts: [], updatedAt: Date.now(),
   };
 }
@@ -177,7 +179,9 @@ function cleanStep(v: unknown): GoalStep | null {
   return { id: typeof o.id === 'string' && o.id ? o.id : newId('st_'), kg, date: isISODate(o.date) ? o.date : null };
 }
 
-function cleanProfile(v: unknown, now: number): Profile | null {
+const asUnit = (v: unknown, fallback: Unit): Unit => (v === 'kg' || v === 'lb' || v === 'st' ? v : fallback);
+
+function cleanProfile(v: unknown, now: number, appUnit: Unit): Profile | null {
   const o = obj(v);
   if (!o) return null;
   const entries = (Array.isArray(o.entries) ? o.entries : []).map(e => cleanEntry(e, now)).filter((e): e is Entry => !!e);
@@ -187,6 +191,8 @@ function cleanProfile(v: unknown, now: number): Profile | null {
   const p: Profile = {
     id: typeof o.id === 'string' && o.id ? o.id : newId('p_'),
     name: typeof o.name === 'string' && o.name.trim() ? o.name.trim().slice(0, 40) : 'Unnamed',
+    // Before v8 the unit was app-wide; each profile takes it over.
+    unit: asUnit(o.unit, appUnit),
     sex: o.sex === 'm' ? 'm' : 'f',
     birthYear: num(o.birthYear),
     heightCm: num(o.heightCm),
@@ -242,9 +248,9 @@ export function migrate(raw: unknown, now = Date.now()): AppData {
   if (version > SCHEMA_VERSION) throw new DataError('newerVersion', 'This backup comes from a newer version of Tare. Update the app and try again.');
   // v1 (the original single-file app) had no ids on entries and no timestamps;
   // cleanProfile/cleanEntry fill those in, so v1 → v2 needs no extra step.
-  const profiles = o.profiles.map(p => cleanProfile(p, now)).filter((p): p is Profile => !!p);
+  const unit: Unit = asUnit(o.unit, 'kg');
+  const profiles = o.profiles.map(p => cleanProfile(p, now, unit)).filter((p): p is Profile => !!p);
   if (!profiles.length) throw new DataError('noProfiles', 'This backup has no profiles in it.');
-  const unit: Unit = o.unit === 'lb' || o.unit === 'st' ? o.unit : 'kg';
   const activeId = profiles.some(p => p.id === o.activeId) ? (o.activeId as string) : profiles[0].id;
   return { version: SCHEMA_VERSION, unit, activeId, profiles, settings: cleanSettings(o.settings) };
 }

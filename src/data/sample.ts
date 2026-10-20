@@ -57,7 +57,7 @@ export function sampleProfile(today = todayISO(), text: SampleText = ENGLISH): P
     d += 1 + Math.floor(rnd() * 2.6);
   }
   return {
-    id: 'sample', sample: true, name: text.name, sex: 'm', birthYear: new Date().getFullYear() - 38, heightCm: 180,
+    id: 'sample', sample: true, name: text.name, unit: 'kg', sex: 'm', birthYear: new Date().getFullYear() - 38, heightCm: 180,
     frame: 'medium', activity: 1.375, goalKg: 80, goalDate: addDays(today, 110), entries, updatedAt: now,
     events: [
       { id: 'sample_ev_away', kind: 'holiday', label: text.events.away, start: addDays(start, 22), end: addDays(start, 24), updatedAt: now },

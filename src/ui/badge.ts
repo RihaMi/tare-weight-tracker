@@ -20,7 +20,7 @@ export function updateBadge(): void {
   const p = profile(), r = calc(p);
   if (mode === 'remaining') {
     if (!r.hasGoal || r.reached || r.remaining == null) { clear(); return; }
-    const n = Math.round(Math.abs(disp(r.remaining, app.data.unit)));
+    const n = Math.round(Math.abs(disp(r.remaining, p.unit)));
     if (n > 0) void nav.setAppBadge!(n).catch(() => {}); else clear();
     return;
   }

@@ -13,7 +13,7 @@ import { openShare } from './ui/shareCard';
 import { bodyView } from './ui/views/body';
 import { bindCalories, caloriesView, resetCalories } from './ui/views/calories';
 import { historyView, toggleWeeks } from './ui/views/history';
-import { overviewView } from './ui/views/overview';
+import { overviewView, rememberChartTable } from './ui/views/overview';
 import { bindProfile, downloadBackup, profileView, resetImport } from './ui/views/profile';
 import { backupNudge } from './lib/backupNudge';
 import { announceSaved, initTabSync } from './ui/sync';
@@ -56,7 +56,7 @@ function renderHeader(): void {
 
 function drawOverviewChart(): void {
   const box = document.getElementById('chartBox');
-  if (box) drawChart(box, profile(), app.data.unit, app.chartRange);
+  if (box) drawChart(box, profile(), app.data.unit, app.chartRange, document.getElementById('chartTable'));
 }
 
 function reminderBanner(): string {
@@ -218,6 +218,11 @@ function newProfile(): void {
 
 function bindGlobalEvents(): void {
   $('#logBtn').addEventListener('click', () => openEntry());
+  // "toggle" doesn't bubble, so it's caught on the way down.
+  document.addEventListener('toggle', ev => {
+    const d = ev.target as HTMLDetailsElement;
+    if (d.classList?.contains('chart-table')) rememberChartTable(d.open);
+  }, true);
   $('#profileSel').addEventListener('change', ev => {
     const v = (ev.target as HTMLSelectElement).value;
     if (v === '__new') { newProfile(); return; }

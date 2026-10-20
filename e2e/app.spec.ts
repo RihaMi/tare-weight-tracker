@@ -150,6 +150,9 @@ const stored = (page: Page) => page.evaluate(() => new Promise<unknown>((resolve
 }));
 
 test('with a PIN, saved data is encrypted; turning it off saves it readable again', async ({ page }) => {
+  // Each PIN step runs the deliberately slow key derivation (150,000 rounds); with many
+  // browsers testing at once that can take longer than the default 5 seconds.
+  const slow = { timeout: 20_000 };
   await open(page, '/');
   await page.locator('#logBtn').click();
   await page.locator('#eW').fill('88.8');
@@ -162,14 +165,14 @@ test('with a PIN, saved data is encrypted; turning it off saves it readable agai
   await page.locator('#pinNew').fill('2580');
   await page.locator('#pinRepeat').fill('2580');
   await page.locator('#pinForm button[type=submit]').click();
-  await expect.poll(async () => (await stored(page) as { tare?: string })?.tare).toBe('encrypted');
+  await expect.poll(async () => (await stored(page) as { tare?: string })?.tare, slow).toBe('encrypted');
   const sealed = JSON.stringify(await stored(page));
   for (const plain of ['private note 7391', 'Alex', '88.8', 'entries']) expect(sealed).not.toContain(plain);
 
   // The note is still there after unlocking.
   await page.reload();
   for (const d of '2580') await page.locator(`#keypad [data-key="${d}"]`).click();
-  await expect(page.locator('#lock')).toBeHidden();
+  await expect(page.locator('#lock')).toBeHidden(slow);
   await page.goto('/#history');
   await expect(page.locator('#view')).toContainText('private note 7391');
 
@@ -177,8 +180,8 @@ test('with a PIN, saved data is encrypted; turning it off saves it readable agai
   await page.locator('[data-pin=remove]').click();
   await page.locator('#pinCur').fill('2580');
   await page.locator('#pinForm button[type=submit]').click();
-  await expect(page.locator('[data-pin=set]')).toBeVisible();
-  await expect.poll(async () => JSON.stringify(await stored(page))).toContain('private note 7391');
+  await expect(page.locator('[data-pin=set]')).toBeVisible(slow);
+  await expect.poll(async () => JSON.stringify(await stored(page)), slow).toContain('private note 7391');
 });
 
 test('loads nothing from outside the app, and its own fonts', async ({ page }) => {

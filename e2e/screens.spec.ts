@@ -19,13 +19,15 @@ async function show(page: Page, path: string) {
   await expect(page.locator('#view .card').first()).toBeVisible();
 }
 
-const shot = { fullPage: true, animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.005 } as const;
+const shot = { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.005 } as const;
+/** Whole page on desktop. On the phone, the visible screen: a full-page shot would draw the fixed tab bar in the middle of the page. */
+const opts = (project: string) => ({ ...shot, fullPage: project !== 'phone' });
 
 for (const tab of ['overview', 'history', 'body', 'calories', 'profile']) {
   test(`${tab}`, async ({ page }, info) => {
     test.skip(info.project.name === 'phone' && !['overview', 'history'].includes(tab), 'phone: the two main screens are enough');
     await show(page, '/#' + tab);
-    await expect(page).toHaveScreenshot(`${tab}.png`, shot);
+    await expect(page).toHaveScreenshot(`${tab}.png`, opts(info.project.name));
   });
 }
 
@@ -34,6 +36,6 @@ test.describe('dark', () => {
   test('overview', async ({ page }, info) => {
     test.skip(info.project.name !== 'desktop', 'one size is enough for dark');
     await show(page, '/#overview');
-    await expect(page).toHaveScreenshot('overview-dark.png', shot);
+    await expect(page).toHaveScreenshot('overview-dark.png', opts(info.project.name));
   });
 });

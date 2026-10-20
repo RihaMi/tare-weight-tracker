@@ -46,7 +46,7 @@ window.tareAudit = async function tareAudit(opts = {}) {
     const shapes = [...document.querySelectorAll('#view *')].filter(e => visible(e) && (parse(getComputedStyle(e).backgroundColor)?.a ?? 0) > 0.1);
     if (document.documentElement.scrollWidth > vw + 1) issues.add(`PAGE SCROLLS SIDEWAYS (${document.documentElement.scrollWidth}px > ${vw}px)`);
     for (const el of document.querySelectorAll('body *')) {
-      if (el.closest('[hidden], svg, script, style, noscript')) continue;
+      if (el.closest('[hidden], svg, script, style, noscript, .sr-only')) continue;
       const cs = getComputedStyle(el);
       if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) continue;
       const r = el.getBoundingClientRect();

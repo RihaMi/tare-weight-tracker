@@ -4,9 +4,11 @@ const ESC: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"
 export const esc = (s: unknown): string => String(s ?? '').replace(/[&<>"']/g, c => ESC[c]);
 
 let toastTimer: number | undefined;
+/** Shows a short message. Screen readers get it from a separate status region, since the visible one is hidden between messages. */
 export function toast(message: string): void {
   const t = $('#toast');
   t.textContent = message;
+  $('#announce').textContent = message;
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => t.classList.remove('show'), 2400);

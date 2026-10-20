@@ -4,6 +4,13 @@ import { expect, test, type Page } from '@playwright/test';
 
 const toast = (page: Page) => page.locator('#toast');
 
+/** Opens a screen once the app is ready offline, so the "works offline" message can't replace the one a test checks. */
+async function open(page: Page, path: string) {
+  await page.goto(path);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await expect(toast(page)).not.toHaveClass(/show/, { timeout: 6000 });
+}
+
 async function logWeight(page: Page, value: string) {
   await page.locator('#logBtn').click();
   await expect(page.locator('#entryDlg')).toBeVisible();
@@ -13,7 +20,7 @@ async function logWeight(page: Page, value: string) {
 }
 
 test('opens with the example profile, logs a weight and keeps it after a reload', async ({ page }) => {
-  await page.goto('/');
+  await open(page, '/');
   await expect(page.locator('#profileSel')).toContainText('example');
   await logWeight(page, '88.8');
   await expect(toast(page)).toContainText('88.8');
@@ -50,7 +57,7 @@ test('a PIN locks the app until it is entered', async ({ page }) => {
 });
 
 test('imports weigh-ins from a CSV file', async ({ page }) => {
-  await page.goto('/#profile');
+  await open(page, '/#profile');
   const chooser = page.waitForEvent('filechooser');
   await page.locator('#csvImport').click();
   await (await chooser).setFiles({

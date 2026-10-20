@@ -11,6 +11,7 @@ import { calc } from '../../lib/calc';
 import { suggestGoal } from '../../lib/health';
 import { orderedSteps } from '../../lib/insights';
 import { suggestSteps } from '../../lib/steps';
+import { nextExpected } from '../../lib/cycle';
 import { ACTIVITY } from '../../lib/calories';
 import { addDays, fmtDate, todayISO } from '../../lib/dates';
 import { CM_IN, deltaUnit, disp, fmtW, fromDisp, isMetric } from '../../lib/units';
@@ -57,6 +58,7 @@ export function profileView(): string {
     </div>
     <p class="note" id="suggestNote" hidden></p>
     ${stepsEditor(p)}
+    ${p.sex === 'f' || p.cycleTracking ? cycleSetting(p) : ''}
     <div class="actions">
       <button type="button" class="btn danger spacer btn-wrap" id="delProfile" ${app.data.profiles.length < 2 && !p.sample ? 'hidden' : ''}>${t('profile.delete')}</button>
       <button type="submit" class="btn primary">${t('profile.save')}</button>
@@ -85,6 +87,17 @@ export function profileView(): string {
     </div>
   </section>
   ${settingsCard()}`;
+}
+
+/** Cycle tracking: off by default, offered for female profiles. */
+function cycleSetting(p: Profile): string {
+  const next = p.cycleTracking ? nextExpected(p.periodStarts) : null;
+  return `<div class="cycle-edit">
+    <h3 class="sub-h">${t('cycle.title')}</h3>
+    <label class="switch"><input type="checkbox" id="pCycle" ${p.cycleTracking ? 'checked' : ''}><span>${t('cycle.on')}</span></label>
+    <p class="note flush">${t('cycle.text')}</p>
+    ${p.cycleTracking ? `<p class="note flush">${p.periodStarts.length ? tn('cycle.logged', p.periodStarts.length) : t('cycle.none')}${next ? ' ' + t('cycle.next', { date: fmtDate(next, { day: 'numeric', month: 'long' }) }) : ''}</p>` : ''}
+  </div>`;
 }
 
 function stepRow(kg: number | null, date: string | null): string {
@@ -122,6 +135,8 @@ function readProfileForm(p: Profile): void {
   const g = num('pGoal');
   p.goalKg = g == null ? null : +fromDisp(g, u).toFixed(2);
   p.goalDate = $<HTMLInputElement>('#pGoalDate').value || null;
+  const cycle = document.querySelector<HTMLInputElement>('#pCycle');
+  if (cycle) p.cycleTracking = cycle.checked;
   p.goalSteps = [...document.querySelectorAll<HTMLElement>('#stepRows .step-row')].flatMap(row => {
     const v = parseFloat(row.querySelector<HTMLInputElement>('.step-kg')!.value);
     const kg = isFinite(v) ? +fromDisp(v, u).toFixed(2) : NaN;
@@ -176,6 +191,7 @@ function showImportConfirm(reading?: string): void {
     ${pv.sameDay ? `<p class="note flush">${tn('import.sameDay', pv.sameDay)}</p>` : ''}
     ${pv.skipped ? `<p class="note flush">${tn('import.skipped', pv.skipped)}</p>` : ''}
     ${outOfRange ? `<p class="note flush">${tn('import.outOfRange', outOfRange)}</p>` : ''}
+    ${pv.periodStarts?.length ? `<p class="note flush">${tn('import.periods', pv.periodStarts.length)}</p>` : ''}
     ${p.sample && entries.length ? `<p class="note flush">${t('import.newProfile')}</p>` : ''}
     <div class="actions start">${entries.length ? `<button type="button" class="btn primary btn-wrap" id="importGo">${tn('import.go', entries.length)}</button>` : ''}<button type="button" class="btn" id="importCancel">${t('common.cancel')}</button></div>
   </div>`;
@@ -194,6 +210,7 @@ function showImportConfirm(reading?: string): void {
       resetCalories();
     }
     const { added, replaced } = mergeEntries(target, entries);
+    if (pv.periodStarts?.length) target.periodStarts = [...new Set([...target.periodStarts, ...pv.periodStarts])].sort();
     const left = pv.skipped + outOfRange;
     pendingImport = null;
     commit(t('backup.imported', { n: added }) + (replaced ? t('backup.importedUpdated', { n: replaced }) : '') + (left ? t('backup.importedSkipped', { n: left }) : ''));

@@ -74,7 +74,7 @@ export function thisWeekCard(p: Profile, r: Stats): string {
 /** A plateau only matters while working toward a goal; holding steady at goal is the point. */
 function plateauNote(r: Stats, short: boolean): string {
   if (!r.hasGoal || r.reached) return '';
-  const pl = plateau(r.E);
+  const pl = plateau(r.steadyE);
   if (!pl) return '';
   if (short) return '<p class="note plateau-note"><span class="pill warn">' + t('plateau.short', { n: pl.days }) + '</span> <a href="#history">' + t('patterns.title') + '</a></p>';
   return '<div class="plateau"><h3>' + t('plateau.title') + '</h3>'
@@ -88,7 +88,7 @@ const weekdayName = (d: number, style: 'long' | 'short'): string => fmtDate('202
 export function patternsCard(r: Stats): string {
   const u = unit();
   if (r.E.length < 2) return '';
-  const w = weekdayPattern(r.E);
+  const w = weekdayPattern(r.steadyE);
   let weekday: string;
   if (!w) {
     weekday = '<p class="note flush">' + t('patterns.weekdayWait') + '</p>';
@@ -111,7 +111,8 @@ export function patternsCard(r: Stats): string {
   }
   return '<section class="card"><div class="card-head"><h2>' + t('patterns.title') + '</h2></div>'
     + plateauNote(r, false)
-    + '<h3 class="sub-h flush-top">' + t('patterns.weekday') + '</h3>' + weekday + '</section>';
+    + '<h3 class="sub-h flush-top">' + t('patterns.weekday') + '</h3>' + weekday
+    + (r.aroundPeriod.size ? '<p class="note">' + t('cycle.leftOut') + '</p>' : '') + '</section>';
 }
 
 

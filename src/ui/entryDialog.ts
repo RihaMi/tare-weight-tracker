@@ -59,6 +59,8 @@ export function openEntry(date?: string | null, focusMeasures = false, linked?: 
     <label class="f">${t('comp.muscle')} (${deltaUnit(u)})<input id="cMuscle" type="number" inputmode="decimal" step="0.1" min="5" value="${c?.muscleKg != null ? disp(c.muscleKg, u).toFixed(1) : ''}"></label>
     <label class="f">${t('comp.water')} (%)<input id="cWater" type="number" inputmode="decimal" step="0.1" min="20" max="85" value="${c?.waterPct ?? ''}"></label>`;
   $<HTMLDetailsElement>('#eCompDetails').open = !!c;
+  $('#ePeriodWrap').hidden = !p.cycleTracking;
+  $<HTMLInputElement>('#ePeriod').checked = p.cycleTracking && p.periodStarts.includes(dateIn.value);
   const del = $<HTMLButtonElement>('#eDelete');
   del.hidden = !ex; del.dataset.armed = ''; del.classList.remove('armed'); del.textContent = t('entry.delete');
   checkExists();
@@ -103,6 +105,11 @@ function submit(ev: SubmitEvent): void {
   if (comp) e.composition = comp;
   p.entries.push(e);
   p.entries.sort((a, b) => (a.date < b.date ? -1 : 1));
+  if (p.cycleTracking) {
+    const started = $<HTMLInputElement>('#ePeriod').checked;
+    const others = p.periodStarts.filter(s => s !== date && s !== editing);
+    p.periodStarts = started ? [...others, date].sort() : others;
+  }
   p.updatedAt = Date.now();
   const wasEditing = editing;
   const r = calc(p);
@@ -114,7 +121,11 @@ function submit(ev: SubmitEvent): void {
 }
 
 export function initEntryDialog(): void {
-  $('#eDate').addEventListener('input', checkExists);
+  $('#eDate').addEventListener('input', () => {
+    checkExists();
+    const p = profile();
+    $<HTMLInputElement>('#ePeriod').checked = p.cycleTracking && p.periodStarts.includes($<HTMLInputElement>('#eDate').value);
+  });
   $('#entryClose').addEventListener('click', () => dlg().close());
   $('#entryCancel').addEventListener('click', () => dlg().close());
   $('#entryForm').addEventListener('submit', submit as EventListener);

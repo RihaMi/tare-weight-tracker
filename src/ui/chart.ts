@@ -2,6 +2,7 @@ import type { Profile, Unit } from '../data/schema';
 import { calc } from '../lib/calc';
 import { goalDateRange } from '../lib/forecast';
 import { eventsOn } from '../lib/events';
+import { AFTER, BEFORE, nextExpected } from '../lib/cycle';
 import { esc } from './dom';
 import { DAY, addDays, fmtDate, iso, toD, todayISO } from '../lib/dates';
 import { disp, fmtDelta, fmtW } from '../lib/units';
@@ -110,11 +111,25 @@ export function drawChart(box: HTMLElement, p: Profile, u: Unit, range: number, 
       + `<text class="ev-t" x="${(x0 + 4).toFixed(1)}" y="${T + 11 + (i % 2) * 12}">${esc(short)}</text></g>`;
   }).join('');
 
+  // Days around a period (cycle tracking on): a light band, and a dashed one for the next expected.
+  let cycleSvg = '';
+  if (p.cycleTracking) {
+    const domainEnd = iso(new Date(d1));
+    const next = nextExpected(p.periodStarts);
+    const bands = [...p.periodStarts.map(s => ({ s, expected: false })), ...(next ? [{ s: next, expected: true }] : [])];
+    cycleSvg = bands.map(({ s, expected }) => {
+      const from = addDays(s, -BEFORE), to = addDays(s, AFTER);
+      if (to < firstDay || from > domainEnd) return '';
+      const x0 = x(from < firstDay ? firstDay : from), x1 = x(to > domainEnd ? domainEnd : to);
+      return `<rect class="cycle${expected ? ' expected' : ''}" x="${x0.toFixed(1)}" y="${T}" width="${Math.max(3, x1 - x0).toFixed(1)}" height="${H - T - B}"/>`;
+    }).join('');
+  }
+
   box.tabIndex = 0;
   box.setAttribute('role', 'group');
   box.setAttribute('aria-label', t('chart.keys', { from: fmtDate(E[0].date), to: fmtDate(E[E.length - 1].date) }));
   box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
-    ${g}${evSvg}<path class="area" d="${area}"/>${goalLine}${coneSvg}${dots}<path class="trend" d="${tl}"/>
+    ${g}${cycleSvg}${evSvg}<path class="area" d="${area}"/>${goalLine}${coneSvg}${dots}<path class="trend" d="${tl}"/>
     <circle class="end" cx="${x(le.date)}" cy="${y(disp(le.kg, u))}" r="5.5"/>
     <line class="hov" x1="0" x2="0" y1="${T}" y2="${H - B}" visibility="hidden"/>
     <rect class="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/>
@@ -131,6 +146,7 @@ export function drawChart(box: HTMLElement, p: Profile, u: Unit, range: number, 
     const day = fmtDate(e.date, { weekday: 'short', day: 'numeric', month: 'short' }), trendW = t('chart.tipTrend', { w: fmtW(trendByDate.get(e.date)!, u) });
     tip.hidden = false;
     const during = eventsOn(p.events, e.date).map(ev => ev.label);
+    if (r.aroundPeriod.has(e.date)) during.push(t('cycle.around'));
     tip.innerHTML = `${day}<br><b>${fmtW(e.kg, u)}</b> · ${trendW}${during.map(l => `<br><span class="tip-ev">${esc(l)}</span>`).join('')}`;
     const sx = (cx * rect.width) / W, sy = (y(disp(e.kg, u)) * rect.height) / H;
     tip.style.left = Math.min(rect.width - 80, Math.max(80, sx)) + 'px';

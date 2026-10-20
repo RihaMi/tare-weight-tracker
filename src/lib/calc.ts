@@ -2,11 +2,16 @@ import type { Entry, Profile } from '../data/schema';
 import { addDays, daysBetween } from './dates';
 import { CM_IN, caloriePlanFor, idealKg } from './health';
 import { maintenance, type Maintenance } from './insights';
+import { aroundDates } from './cycle';
 
 export { idealKg, bmiCategory, BMI_CATS } from './health';
 
 export interface Stats {
   E: Entry[];
+  /** With cycle tracking on: the dates around a period (water retention). Empty otherwise. */
+  aroundPeriod: Set<string>;
+  /** E without those days: what the pace check, plateaus and weekday patterns use. */
+  steadyE: Entry[];
   first?: Entry;
   last?: Entry;
   start?: number;
@@ -56,7 +61,9 @@ export function calc(p: Profile, now = new Date()): Stats {
   const E = sortedEntries(p);
   const age = ageOf(p, now);
   const ideal = idealKg(p);
-  const base: Stats = { E, age, bmi: null, hasGoal: false, dir: -1, planPerDay: -0.5 / 7, ideal };
+  const aroundPeriod = p.cycleTracking ? aroundDates(p.periodStarts) : new Set<string>();
+  const steadyE = aroundPeriod.size ? E.filter(e => !aroundPeriod.has(e.date)) : E;
+  const base: Stats = { E, aroundPeriod, steadyE, age, bmi: null, hasGoal: false, dir: -1, planPerDay: -0.5 / 7, ideal };
   if (!E.length) return base;
 
   const first = E[0], last = E[E.length - 1], goal = p.goalKg;
@@ -76,9 +83,9 @@ export function calc(p: Profile, now = new Date()): Stats {
     r.maintenance = maintenance(E, goal!);
   }
 
-  // Recent pace: the last three weeks of entries.
+  // Recent pace: the last three weeks of entries, leaving out days around a period when tracked.
   const cutoff = addDays(last.date, -21);
-  const recent = E.filter(e => e.date >= cutoff);
+  const recent = steadyE.filter(e => e.date >= cutoff);
   r.recentPerDay = recent.length > 1
     ? (recent[recent.length - 1].kg - recent[0].kg) / Math.max(1, daysBetween(recent[0].date, recent[recent.length - 1].date))
     : r.perDay;

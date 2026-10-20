@@ -80,7 +80,7 @@ function plateauNote(r: Stats, short: boolean): string {
 }
 
 /** Weekday names in the current language, Monday first (5 January 2026 was a Monday). */
-const weekdayName = (d: number, style: 'long' | 'short'): string => fmtDate('2026-01-0' + (5 + d), { weekday: style });
+const weekdayName = (d: number, style: 'long' | 'short'): string => fmtDate('2026-01-' + String(5 + d).padStart(2, '0'), { weekday: style });
 
 export function patternsCard(r: Stats): string {
   const u = unit();
@@ -93,7 +93,8 @@ export function patternsCard(r: Stats): string {
     const max = Math.max(...w.byDay.map(v => Math.abs(v ?? 0)), 0.2);
     const bars = w.byDay.map((v, d) => {
       const h = v == null ? 0 : (Math.abs(v) / max) * 50;
-      const cls = (v == null ? 'none' : v >= 0 ? 'up' : 'down') + (d === w.heaviest || d === w.lightest ? ' mark' : '');
+      const notable = w.spread >= 0.3 && (d === w.heaviest || d === w.lightest);
+      const cls = (v == null ? 'none' : v >= 0 ? 'up' : 'down') + (notable ? ' mark' : '');
       const label = v == null ? '–' : fmtDelta(v, u);
       return '<div class="wd ' + cls + '" title="' + weekdayName(d, 'long') + ': ' + label + '">'
         + '<div class="wd-plot"><span style="height:' + h.toFixed(1) + '%"></span></div>'

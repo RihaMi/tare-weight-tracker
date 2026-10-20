@@ -123,6 +123,19 @@ describe('weekday pattern', () => {
     expect(w.spread).toBeGreaterThan(0.5);
   });
 
+  it('shows no pattern for a steady loss without a weekday effect', () => {
+    // The smoothed trend lags during a loss; a lagging comparison would make every day look lighter.
+    const list = Array.from({ length: 70 }, (_, i) => e(day(i), 90 - i * 0.08));
+    const w = weekdayPattern(list)!;
+    expect(w.spread).toBeLessThan(0.05);
+    expect(Math.max(...w.byDay.map(v => Math.abs(v ?? 0)))).toBeLessThan(0.05);
+  });
+
+  it('also works with gaps between weigh-ins', () => {
+    const list = Array.from({ length: 105 }, (_, i) => i).filter(i => i % 3 !== 2).map(i => e(day(i), 85 - i * 0.04 + ((i % 7) === 5 ? -0.6 : 0)));
+    expect(weekdayPattern(list)!.lightest).toBe(5); // Saturdays
+  });
+
   it('needs about six weeks of data', () => {
     expect(weekdayPattern(Array.from({ length: 30 }, (_, i) => e(day(i), 80)))).toBeNull();
   });

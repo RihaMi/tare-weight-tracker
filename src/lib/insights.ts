@@ -165,7 +165,7 @@ export function plateau(entries: Entry[]): Plateau | null {
 }
 
 export interface WeekdayPattern {
-  /** Average kg above (+) or below (−) the trend, Monday first; null where there's too little data. */
+  /** Average kg above (+) or below (−) a typical day, Monday first; null where there's too little data. */
   byDay: Array<number | null>;
   heaviest: number;  // 0 = Monday
   lightest: number;
@@ -173,21 +173,45 @@ export interface WeekdayPattern {
 }
 
 /**
- * How each day of the week compares with the trend on that day. Measuring
- * against the trend (not the overall average) keeps a steady loss or gain
- * from making early-week days look heavier.
+ * Weight expected on an entry's date from a straight line fitted through the
+ * weigh-ins within a week either side. Centred, so unlike the smoothed trend
+ * it doesn't lag behind during a loss or gain. Null if too few neighbours.
+ */
+function localLevel(entries: Entry[], i: number, halfWindowDays = 7): number | null {
+  const pts: Array<[number, number]> = [];
+  for (const e of entries) {
+    const x = daysBetween(entries[i].date, e.date);
+    if (Math.abs(x) <= halfWindowDays) pts.push([x, e.kg]);
+  }
+  if (pts.length < 4) return null;
+  const n = pts.length, sx = pts.reduce((s, p) => s + p[0], 0), sy = pts.reduce((s, p) => s + p[1], 0);
+  const sxx = pts.reduce((s, p) => s + p[0] * p[0], 0), sxy = pts.reduce((s, p) => s + p[0] * p[1], 0);
+  const den = n * sxx - sx * sx;
+  const slope = den ? (n * sxy - sx * sy) / den : 0;
+  return (sy - slope * sx) / n; // the line's value at this entry's date (x = 0)
+}
+
+/**
+ * How each day of the week compares with the local level around it. Using a
+ * centred local fit (not the lagging trend, and not the overall average)
+ * keeps a steady loss or gain from making every day look lighter or heavier.
+ * Values are centred so the days average to zero.
  * Needs six weeks of data and at least three weigh-ins on four different weekdays.
  */
 export function weekdayPattern(entries: Entry[]): WeekdayPattern | null {
   if (entries.length < 21 || daysBetween(entries[0].date, entries[entries.length - 1].date) < 42) return null;
-  const tr = trendSeries(entries);
   const sums = Array<number>(7).fill(0), counts = Array<number>(7).fill(0);
   entries.forEach((e, i) => {
+    const level = localLevel(entries, i);
+    if (level == null) return;
     const dow = (toD(e.date).getUTCDay() + 6) % 7;
-    sums[dow] += e.kg - tr[i].kg;
+    sums[dow] += e.kg - level;
     counts[dow]++;
   });
-  const byDay = sums.map((s, d) => (counts[d] >= 3 ? s / counts[d] : null));
+  const raw = sums.map((s, d) => (counts[d] >= 3 ? s / counts[d] : null));
+  const present = raw.filter((v): v is number => v != null);
+  const mean = present.length ? present.reduce((a, b) => a + b, 0) / present.length : 0;
+  const byDay = raw.map(v => (v == null ? null : v - mean));
   const known = byDay.flatMap((v, d) => (v == null ? [] : [[v, d] as const]));
   if (known.length < 4) return null;
   const [maxV, heaviest] = known.reduce((a, b) => (b[0] > a[0] ? b : a));

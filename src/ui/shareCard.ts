@@ -153,10 +153,10 @@ let showWeights = false;
 let blob: Blob | null = null;
 let url = '';
 
+/** Waits for the app's fonts, but not for long: on a slow connection the picture is drawn with system fonts instead. */
 async function loadFonts(): Promise<void> {
-  try {
-    await Promise.all([`800 100px ${DISPLAY}`, `500 30px ${BODY}`, `600 30px ${BODY}`, `700 30px ${BODY}`].map(f => document.fonts.load(f)));
-  } catch { /* system fonts are fine */ }
+  const fonts = Promise.all([`800 100px ${DISPLAY}`, `500 30px ${BODY}`, `600 30px ${BODY}`, `700 30px ${BODY}`].map(f => document.fonts.load(f)));
+  try { await Promise.race([fonts, new Promise(res => setTimeout(res, 1500))]); } catch { /* system fonts are fine */ }
 }
 
 async function redraw(m: CardModel): Promise<void> {

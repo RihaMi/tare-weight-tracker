@@ -105,3 +105,21 @@ test('keeps working offline once loaded', async ({ page, context }) => {
   await expect(page.locator('#logBtn')).toBeVisible();
   await expect(page.locator('#view .card').first()).toBeVisible();
 });
+
+test('makes a progress picture to download, without weights unless asked', async ({ page }) => {
+  await open(page, '/');
+  await page.locator('[data-act=share]').click();
+  const img = page.locator('#shareImg');
+  // Checked in the page itself: the picture arrives as a blob: URL set on the image.
+  const src = () => page.waitForFunction(() => document.querySelector<HTMLImageElement>('#shareImg')?.src || null);
+  const pictureOtherThan = (old: string) =>
+    page.waitForFunction(o => { const s = document.querySelector<HTMLImageElement>('#shareImg')?.src ?? ''; return s.startsWith('blob:') && s !== o; }, old);
+  await pictureOtherThan('');
+  await expect.poll(() => img.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth)).toBe(1080);
+  const before = await (await src()).jsonValue() as string;
+  await page.locator('#shareWeights').check();
+  await pictureOtherThan(before);
+  const download = page.waitForEvent('download');
+  await page.locator('#shareDownload').click();
+  expect((await download).suggestedFilename()).toMatch(/^tare-progress-\d{4}-\d{2}-\d{2}\.png$/);
+});

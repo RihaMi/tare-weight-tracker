@@ -5,6 +5,7 @@ import { BMI_CATS, bmiCategory, calc, paceState, type Stats } from '../../lib/ca
 import { roundKcal } from '../../lib/calories';
 import { fmtDate, todayISO } from '../../lib/dates';
 import { goalDateRange } from '../../lib/forecast';
+import { compositionSummary } from '../../lib/composition';
 import { orderedSteps } from '../../lib/insights';
 import { nextStep, stepsReached } from '../../lib/steps';
 import { fmtInt, fmtNum } from '../../lib/format';
@@ -119,6 +120,9 @@ function statsCard(p: Profile, r: Stats): string {
     <div class="stats">${stats.map(([k, v, c]) => `<div class="stat"><span class="v ${c}">${esc(v)}</span><span class="k">${t(k)}</span></div>`).join('')}</div></section>`;
 }
 
+/** Body fat as a smart scale measures it, smoothed; undefined without readings. */
+const scaleFat = (r: Stats): number | undefined => compositionSummary(r.E).fat?.latest;
+
 function bmiCard(p: Profile, r: Stats): string {
   if (!r.bmi) return '';
   const u = unit(), lo = 15, hi = 42;
@@ -141,6 +145,7 @@ function bmiCard(p: Profile, r: Stats): string {
     <dl class="kv">
       ${r.healthyLo ? `<dt>${t('bmi.healthyRange')}</dt><dd>${fmtW(r.healthyLo, u, false)}–${fmtW(r.healthyHi, u)}</dd>` : ''}
       ${r.ideal ? `<dt>${t('bmi.ideal', { frame: t(`frame.${p.frame}` as Key) })}</dt><dd>${fmtW(r.ideal, u)}</dd>` : ''}
+      ${scaleFat(r) != null ? `<dt>${t('bmi.bfScale')}</dt><dd>${fmtNum(scaleFat(r)!)} %</dd>` : ''}
       ${r.bodyFat ? `<dt>${t('bmi.bfBmi')}</dt><dd>${fmtNum(r.bodyFat)} %</dd>` : ''}
       ${r.navyBF ? `<dt>${t('bmi.bfTape')}</dt><dd>${fmtNum(r.navyBF)} %</dd>` : ''}
     </dl></section>`;

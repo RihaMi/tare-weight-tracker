@@ -25,10 +25,10 @@ const csvField = (v: string | number | undefined): string => {
 };
 
 export function toCSV(p: Profile): string {
-  const head = ['date', 'weight_kg', 'note', ...MEASURES.map(([k]) => `${k}_cm`)];
+  const head = ['date', 'weight_kg', 'note', ...MEASURES.map(([k]) => `${k}_cm`), 'body_fat_pct', 'muscle_kg', 'water_pct'];
   const rows = [...p.entries]
     .sort((a, b) => (a.date < b.date ? -1 : 1))
-    .map(e => [e.date, e.kg, e.note, ...MEASURES.map(([k]) => e.measures?.[k])].map(csvField).join(','));
+    .map(e => [e.date, e.kg, e.note, ...MEASURES.map(([k]) => e.measures?.[k]), e.composition?.fatPct, e.composition?.muscleKg, e.composition?.waterPct].map(csvField).join(','));
   return [head.join(','), ...rows].join('\n') + '\n';
 }
 

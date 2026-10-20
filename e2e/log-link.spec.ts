@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 // Logging a weight from a link (?log=84.2), as iOS Shortcuts or an NFC tag would open it.
 

@@ -21,17 +21,32 @@ function readingHTML(kg: number): string {
   return `${fmtNum(disp(kg, u))}<small>${deltaUnit(u)}</small>`;
 }
 
+/** Where the trend sits in the maintenance range around the goal: the range in the middle third of the bar. */
+function maintainBar(p: Profile, r: Stats): string {
+  const m = r.maintenance!, u = unit();
+  const pos = Math.min(98, Math.max(2, 50 + (m.offKg / (3 * m.bandKg)) * 50));
+  const status = m.inBand
+    ? tn('maintain.inRange', m.streakDays)
+    : t(m.offKg > 0 ? 'maintain.above' : 'maintain.below', { w: fmtW(Math.abs(m.offKg) - m.bandKg, u) });
+  return `<div class="maint-range" aria-label="${esc(status)}">
+      <div class="maintain-track"><div class="maintain-band"></div><div class="maintain-mark ${m.inBand ? '' : 'out'}" style="left:${pos.toFixed(1)}%"></div></div>
+      <div class="maint-labels" aria-hidden="true"><span style="left:33.3%">${fmtW(p.goalKg! - m.bandKg, u)}</span><span style="left:66.7%">${fmtW(p.goalKg! + m.bandKg, u)}</span></div>
+      <p class="note flush">${status}${m.inBand ? '' : ' ' + t('maintain.calm')}</p>
+    </div>`;
+}
+
 function hero(p: Profile, r: Stats): string {
   const u = unit(), pace = paceState(r), last = r.last!;
-  const goalTxt = r.hasGoal
-    ? (r.reached ? t('overview.goalReached', { w: fmtW(p.goalKg, u) }) : t('overview.toGo', { w: fmtW(Math.abs(r.remaining!), u) }))
-    : t('overview.noGoal');
+  const goalTxt = !r.hasGoal ? t('overview.noGoal')
+    : r.maintenance?.inBand ? t('overview.maintaining', { w: fmtW(p.goalKg, u) })
+    : r.maintenance ? t('overview.goalReached', { w: fmtW(p.goalKg, u) })
+    : r.reached ? t('overview.goalReached', { w: fmtW(p.goalKg, u) }) : t('overview.toGo', { w: fmtW(Math.abs(r.remaining!), u) });
   const pct = r.hasGoal ? Math.round(r.progress! * 100) : 0;
   return `<section class="card hero">
     <div class="hero-top"><span class="eyebrow">${t('overview.latest', { date: fmtDate(last.date, { weekday: 'short', day: 'numeric', month: 'short' }) })}</span>${pace ? `<span class="pill ${pace.cls}">${t(`pace.${pace.code}` as Key)}</span>` : ''}</div>
     <div class="reading" aria-label="${esc(t('overview.currentWeight', { w: fmtW(r.cur, u) }))}">${readingHTML(r.cur!)}</div>
     <div class="hero-sub">${t('overview.since', { delta: fmtDelta(r.change!, u), date: fmtDate(r.first!.date, { day: 'numeric', month: 'short', year: 'numeric' }) })} · ${goalTxt}</div>
-    ${r.hasGoal ? `<div class="ruler" aria-label="${esc(t('overview.progressAria', { pct }))}">
+    ${r.maintenance ? maintainBar(p, r) : r.hasGoal ? `<div class="ruler" aria-label="${esc(t('overview.progressAria', { pct }))}">
       <div class="ruler-track"><div class="ruler-ticks"></div><div class="ruler-bar"></div><div class="ruler-fill" style="width:${pct}%"></div><div class="ruler-mark" style="left:${pct}%"></div></div>
       <div class="ruler-labels"><span>${t('overview.start')} <b>${fmtW(r.start, u)}</b></span><span>${t('overview.there', { pct })}</span><span>${t('common.goal')} <b>${fmtW(p.goalKg, u)}</b></span></div>
     </div>` : `<p class="note">${t('overview.setGoal', { link: profileLink() })}</p>`}

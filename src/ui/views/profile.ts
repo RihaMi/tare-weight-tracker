@@ -7,7 +7,8 @@ import { autoBackupState, backUpNow, chooseBackupFolder, resumeAutoBackup, stopA
 import { guessUnit, readImportFile, toEntries, type ImportPreview, type WeightUnit } from '../../data/importers';
 import { DataError, blankProfile, type AppData, type Frame, type Profile } from '../../data/schema';
 import { t, tn, type Key } from '../../i18n';
-import { calc, idealKg } from '../../lib/calc';
+import { calc } from '../../lib/calc';
+import { suggestGoal } from '../../lib/health';
 import { ACTIVITY } from '../../lib/calories';
 import { addDays, fmtDate, todayISO } from '../../lib/dates';
 import { CM_IN, deltaUnit, disp, fmtW, fromDisp, isMetric } from '../../lib/units';
@@ -248,12 +249,11 @@ export function bindProfile(): void {
   $('#suggestBtn').addEventListener('click', () => {
     const tmp: Profile = structuredClone(p);
     readProfileForm(tmp);
-    const r = calc(tmp), ideal = idealKg(tmp), note = $('#suggestNote');
+    const r = calc(tmp), note = $('#suggestNote');
+    const sg = r.cur != null ? suggestGoal(tmp, r.cur) : null;
     note.hidden = false;
-    if (!ideal || r.cur == null) { note.textContent = t('profile.suggestNeed'); return; }
-    const h2 = (tmp.heightCm! / 100) ** 2;
-    const goal = Math.min(24.9 * h2, Math.max(18.5 * h2, ideal));
-    const weeks = Math.ceil(Math.abs(r.cur - goal) / 0.5);
+    if (!sg) { note.textContent = t('profile.suggestNeed'); return; }
+    const { goalKg: goal, weeks } = sg;
     $<HTMLInputElement>('#pGoal').value = disp(goal, unit()).toFixed(1);
     $<HTMLInputElement>('#pGoalDate').value = addDays(todayISO(), weeks * 7);
     note.textContent = t('profile.suggestNote', { weeks, date: fmtDate(addDays(todayISO(), weeks * 7), { day: 'numeric', month: 'long', year: 'numeric' }) });

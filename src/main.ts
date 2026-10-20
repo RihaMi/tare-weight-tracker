@@ -1,12 +1,13 @@
 import './fonts.css';
 import './styles.css';
 import { registerSW } from 'virtual:pwa-register';
-import { app, commit, go, isTab, profile, type Tab } from './app';
+import { app, commit, isTab, profile, type Tab } from './app';
 import { sampleProfile } from './data/sample';
 import { blankProfile, freshData, type Unit } from './data/schema';
 import { createSaver, loadData, openStore } from './data/storage';
 import { showStartupProblem } from './ui/startup';
 import { autoBackupState, initAutoBackup, resumeAutoBackup, scheduleAutoBackup } from './ui/autoBackup';
+import { openSetup, shouldOfferSetup } from './ui/setup';
 import { drawChart } from './ui/chart';
 import { $, esc, toast } from './ui/dom';
 import { initEntryDialog, openEntry } from './ui/entryDialog';
@@ -213,14 +214,9 @@ function setupAutoLock(): void {
   });
 }
 
+/** "Create my profile" and "+ New profile" open the short setup. */
 function newProfile(): void {
-  const np = blankProfile(t(app.data.profiles.some(p => !p.sample) ? 'profile.newName' : 'profile.defaultName'));
-  app.data.profiles.push(np);
-  app.data.activeId = np.id;
-  resetCalories();
-  commit();
-  go('profile');
-  setTimeout(() => $<HTMLInputElement>('#pName')?.select(), 30);
+  openSetup({ firstRun: false });
 }
 
 function bindGlobalEvents(): void {
@@ -393,7 +389,8 @@ async function start(): Promise<void> {
   app.tab = isTab(h) ? h : 'overview';
   app.chartRange = 90;
   app.render = render;
-  if (!data && !locked) void app.persist(app.data); // first run only: never write over encrypted data
+  const firstVisit = !data && !locked;
+  if (firstVisit) void app.persist(app.data); // first run only: never write over encrypted data
   void navigator.storage?.persist?.();
   // Fonts used to come from Google and were cached separately; they're part of the app now.
   void globalThis.caches?.delete('google-fonts').catch(() => {});
@@ -407,7 +404,9 @@ async function start(): Promise<void> {
   const afterUnlock = () => {
     render();
     if (imported) toast(t('app.importedLegacy'));
-    if (launchedToLog()) handleLaunchAction(); else maybeQuickLog();
+    if (launchedToLog()) handleLaunchAction();
+    else if (firstVisit && shouldOfferSetup()) openSetup({ firstRun: true });
+    else maybeQuickLog();
   };
   if (locked) showLock(afterUnlock, { length: locked.pinLength, verify: pin => unlockEncrypted(pin, locked) });
   else if (app.data.settings.pin) showLock(afterUnlock, { verify: unlockLoaded });

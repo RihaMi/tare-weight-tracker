@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 
 // Automatic backups to a folder. The real folder picker can't be driven in a
 // headless browser, so it's replaced by a folder in the browser's private

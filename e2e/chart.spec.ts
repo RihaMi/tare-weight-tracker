@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 // The weight chart without a mouse: arrow keys, read-out text, and a table.
 

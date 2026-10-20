@@ -4,6 +4,7 @@ import { freshData } from '../data/schema';
 import { lockoutMs, verifyPin } from '../lib/pin';
 import { $, armOrRun } from './dom';
 import { t } from '../i18n';
+import { forgetPasskey, passkeyEnabled, pinFromPasskey } from '../lib/passkey';
 
 // Full-screen PIN prompt. Nothing from the user's data is rendered while it shows.
 
@@ -61,8 +62,8 @@ const defaultVerify = async (pin: string): Promise<boolean> => {
   return !!stored && verifyPin(pin, stored);
 };
 
-async function check(): Promise<void> {
-  if (busy) return;
+async function check(): Promise<boolean> {
+  if (busy) return false;
   busy = true;
   $('.lock-box').classList.add('busy');
   const ok = await (options.verify ?? defaultVerify)(entered).catch(() => false);
@@ -72,7 +73,7 @@ async function check(): Promise<void> {
     writeFails({ n: 0, until: 0 });
     entered = '';
     hideLock();
-    return;
+    return true;
   }
   const f = readFails();
   f.n++;
@@ -83,6 +84,22 @@ async function check(): Promise<void> {
   const box = $('.lock-box');
   box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
   if (waitingFor() > 0) showWait(); else message(t('lock.wrong'), true);
+  return false;
+}
+
+/** Face ID or fingerprint instead of the keypad: the passkey gives back the PIN, which unlocks as usual. */
+async function unlockWithPasskey(): Promise<void> {
+  if (busy) return;
+  let pin: string;
+  try { pin = await pinFromPasskey(); } catch { message(t('lock.passkeyFailed'), true); return; }
+  entered = pin;
+  drawDots();
+  if (!(await check())) {
+    // The PIN was changed somewhere else since; this passkey no longer fits.
+    forgetPasskey();
+    $('#passkeyUnlock').hidden = true;
+    message(t('lock.passkeyStale'), true);
+  }
 }
 
 function press(key: string): void {
@@ -113,7 +130,8 @@ export function showLock(then: () => void, opts: LockOptions = {}): void {
   document.querySelector('.wrap')?.setAttribute('inert', '');
   drawDots();
   if (waitingFor() > 0) showWait(); else message('');
-  $<HTMLButtonElement>('#keypad button[data-key="1"]').focus();
+  $('#passkeyUnlock').hidden = !passkeyEnabled();
+  $<HTMLButtonElement>(passkeyEnabled() ? '#passkeyUnlock' : '#keypad button[data-key="1"]').focus();
 }
 
 export function initLock(): void {
@@ -126,11 +144,13 @@ export function initLock(): void {
     if (/^\d$/.test(ev.key)) { press(ev.key); ev.preventDefault(); }
     else if (ev.key === 'Backspace') { press('back'); ev.preventDefault(); }
   });
+  $('#passkeyUnlock').addEventListener('click', () => void unlockWithPasskey());
   $('#forgotPin').addEventListener('click', () => { $('#forgotPanel').hidden = false; $('#keypad').hidden = true; });
   $('#forgotCancel').addEventListener('click', () => { $('#forgotPanel').hidden = true; $('#keypad').hidden = false; });
   $('#forgotErase').addEventListener('click', ev => {
     armOrRun(ev.currentTarget as HTMLButtonElement, t('lock.eraseConfirm'), () => {
       app.key = null;
+      forgetPasskey();
       app.data = freshData([sampleProfile(undefined, app.sampleText())]);
       void app.persist(app.data); // no PIN and no key: saved unencrypted, replacing the encrypted copy
       writeFails({ n: 0, until: 0 });

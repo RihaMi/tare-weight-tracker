@@ -6,12 +6,13 @@ import { addDays, todayISO } from '../../lib/dates';
 import { dailyReminderICS, isPastTime } from '../../lib/ics';
 import { hashPin, isValidPin, verifyPin } from '../../lib/pin';
 import { newKeyInfo } from '../../lib/crypto';
+import { enablePasskey, forgetPasskey, passkeyEnabled, passkeySupported } from '../../lib/passkey';
 import { badgeSupported, updateBadge } from '../badge';
 import { $, download, esc, toast } from '../dom';
 
 // App-wide settings: language, PIN lock, daily reminder and icon badge. Shown under Profile & goal.
 
-type PinMode = 'idle' | 'set' | 'change' | 'remove';
+type PinMode = 'idle' | 'set' | 'change' | 'remove' | 'passkey';
 let pinMode: PinMode = 'idle';
 
 const LOCK_OPTIONS: ReadonlyArray<readonly [number, Key]> = [[0, 'settings.lock0'], [1, 'settings.lock1'], [5, 'settings.lock5'], [15, 'settings.lock15']];
@@ -26,7 +27,7 @@ function pinForm(): string {
   const fields = pinMode === 'set' ? pinInput('pinNew', 'settings.pinNew') + pinInput('pinRepeat', 'settings.pinRepeat')
     : pinMode === 'change' ? pinInput('pinCur', 'settings.pinCurrent') + pinInput('pinNew', 'settings.pinNew') + pinInput('pinRepeat', 'settings.pinRepeat')
     : pinInput('pinCur', 'settings.pinCurrent');
-  const label = t(pinMode === 'set' ? 'settings.pinDoSet' : pinMode === 'change' ? 'settings.pinDoChange' : 'settings.pinDoRemove');
+  const label = t(pinMode === 'set' ? 'settings.pinDoSet' : pinMode === 'change' ? 'settings.pinDoChange' : pinMode === 'passkey' ? 'settings.passkeyDoOn' : 'settings.pinDoRemove');
   return `<form id="pinForm" class="form pin-form" novalidate>
     <div class="fields">${fields}</div>
     <p class="warnbox" id="pinErr" role="alert" hidden></p>
@@ -62,6 +63,9 @@ export function settingsCard(): string {
           ? `<button type="button" class="btn" data-pin="change">${t('settings.pinChange')}</button><button type="button" class="btn danger" data-pin="remove">${t('settings.pinTurnOff')}</button>`
           : `<button type="button" class="btn primary" data-pin="set">${t('settings.pinSet')}</button>`}</div>
         ${pinForm()}
+        ${on && passkeySupported() ? `<div class="passkey-row"><p class="note flush">${t(passkeyEnabled() ? 'settings.passkeyIsOn' : 'settings.passkeyText')}</p>
+          ${passkeyEnabled() ? `<button type="button" class="btn btn-wrap" id="passkeyOff" aria-label="${esc(t('settings.passkeyOffLabel'))}">${t('settings.passkeyOff')}</button>`
+            : pinMode === 'passkey' ? '' : `<button type="button" class="btn" data-pin="passkey">${t('settings.passkeyOn')}</button>`}</div>` : ''}
         ${on ? `<label class="f inline-f">${t('settings.autoLock')}
           <select id="autoLock">${LOCK_OPTIONS.map(([v, l]) => `<option value="${v}" ${s.autoLockMinutes === v ? 'selected' : ''}>${t(l)}</option>`).join('')}</select></label>` : ''}
       </div>
@@ -102,8 +106,15 @@ async function submitPin(ev: SubmitEvent): Promise<void> {
   const fail = (k: Key) => { err.hidden = false; err.textContent = t(k); };
   const s = app.data.settings;
   if (pinMode !== 'set' && !(s.pin && (await verifyPin(val('pinCur'), s.pin)))) { fail('settings.pinWrongCurrent'); return; }
+  if (pinMode === 'passkey') {
+    try { await enablePasskey(val('pinCur')); } catch { fail('settings.passkeyFailed'); return; }
+    pinMode = 'idle';
+    commit(t('settings.passkeyTurnedOn'));
+    return;
+  }
   if (pinMode === 'remove') {
     s.pin = null; app.key = null; pinMode = 'idle'; // saved unencrypted from now on
+    forgetPasskey();
     commit(t('settings.pinTurnedOff'));
     return;
   }
@@ -112,6 +123,7 @@ async function submitPin(ev: SubmitEvent): Promise<void> {
   const wasOn = !!s.pin;
   s.pin = await hashPin(val('pinNew'));
   app.key = await newKeyInfo(val('pinNew')); // new salt: data is re-encrypted with the new PIN on save
+  forgetPasskey(); // it holds the old PIN; turn it on again for the new one
   pinMode = 'idle';
   commit(t(wasOn ? 'settings.pinChanged' : 'settings.pinTurnedOn'));
 }
@@ -137,6 +149,7 @@ export function bindSettings(): void {
   }));
   $('#pinForm')?.addEventListener('submit', ev => void submitPin(ev as SubmitEvent));
   $('#pinCancel')?.addEventListener('click', () => { pinMode = 'idle'; rerenderCard(); });
+  $('#passkeyOff')?.addEventListener('click', () => { forgetPasskey(); rerenderCard(); toast(t('settings.passkeyTurnedOff')); });
   $('#autoLock')?.addEventListener('change', ev => {
     app.data.settings.autoLockMinutes = +(ev.target as HTMLSelectElement).value;
     commit(t('settings.autoLockSaved'));

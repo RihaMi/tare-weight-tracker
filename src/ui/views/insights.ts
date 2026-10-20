@@ -21,6 +21,7 @@ export function milestoneLabel(m: Milestone, dir: number, u: Unit): string {
     case 'progress': return t('ms.progress', { pct: m.pct });
     case 'goal': return t('ms.goal');
     case 'bmi': return m.category === 'normal' ? t('ms.bmiHealthy') : t('ms.bmi', { cat: t(`bmi.${m.category}` as Key).toLowerCase() });
+    case 'maintain': return t(`ms.maintain${m.days}` as Key);
   }
 }
 

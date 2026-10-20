@@ -68,7 +68,12 @@ export type Milestone =
   | { key: string; kind: 'weight'; steps: number; amountKg: number; date: string }
   | { key: string; kind: 'progress'; pct: 25 | 50 | 75; date: string }
   | { key: string; kind: 'goal'; date: string }
-  | { key: string; kind: 'bmi'; category: BmiId; date: string };
+  | { key: string; kind: 'bmi'; category: BmiId; date: string }
+  | { key: string; kind: 'maintain'; days: MaintainDays; date: string };
+
+/** Time spent at the goal (in the maintenance range) that counts as a milestone. */
+export type MaintainDays = 28 | 91 | 365;
+const MAINTAIN_DAYS: readonly MaintainDays[] = [28, 91, 365];
 
 export interface NextMilestone {
   kind: 'weight' | 'progress' | 'goal';
@@ -134,9 +139,64 @@ export function milestones({ entries, goalKg, heightCm, unit }: MilestoneInput):
     candidates.push({ kind: 'goal', remainingKg: span - movedNow });
   }
   const ahead = candidates.filter(c => c.remainingKg > 0.05).sort((a, b) => a.remainingKg - b.remainingKg);
-  // Past the goal, extra weight steps aren't worth celebrating.
+  // Past the goal, extra weight steps aren't worth celebrating; staying there is.
   const next = goalDone ? null : ahead[0] ?? null;
+  if (goalDone) {
+    const m = maintenance(entries, goalKg!);
+    for (const ms of m?.milestones ?? []) achieved.push({ key: `m${ms.days}`, kind: 'maintain', days: ms.days, date: ms.date });
+    achieved.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  }
   return { achieved, next };
+}
+
+/** How far the trend may drift from the goal and still count as maintaining: ±2 % of it, at least 1 kg. */
+export const maintenanceBand = (goalKg: number): number => Math.max(1, goalKg * 0.02);
+
+export interface Maintenance {
+  since: string;           // when the goal was first reached
+  bandKg: number;          // ± around the goal
+  trendKg: number;         // latest smoothed weight
+  offKg: number;           // trend − goal; positive means above
+  inBand: boolean;
+  streakDays: number;      // days in a row the trend has been in the range, up to the latest weigh-in
+  milestones: Array<{ days: MaintainDays; date: string }>; // first time each length of stay was reached
+}
+
+/**
+ * Staying at the goal once it's been reached. Uses the smoothed trend, so a
+ * heavy day or two doesn't count as leaving the range. Starts once the trend
+ * itself has come into the range: right after a first weigh-in at the goal
+ * the trend still lags behind, and calling that "outside your range" would be
+ * wrong. Null until then.
+ */
+export function maintenance(entries: Entry[], goalKg: number): Maintenance | null {
+  if (entries.length < 2) return null;
+  const start = entries[0].kg, dir = goalKg > start ? 1 : -1;
+  if (Math.abs(goalKg - start) <= 0.05) return null;
+  const band = maintenanceBand(goalKg);
+  // Both: a weigh-in has reached the goal, and since then the trend has come into the range.
+  // (Coming down steadily, the trend can enter the range a little before the goal itself.)
+  const hit = entries.find(e => dir * (e.kg - goalKg) >= 0);
+  if (!hit) return null;
+  const all = trendSeries(entries);
+  const reached = all.find(p => p.date >= hit.date && dir * (p.kg - goalKg) >= -band);
+  if (!reached) return null;
+  const trend = all.filter(p => p.date >= reached.date);
+  const milestones: Maintenance['milestones'] = [];
+  let runStart: string | null = null;
+  for (const p of trend) {
+    if (Math.abs(p.kg - goalKg) <= band) {
+      runStart ??= p.date;
+      const days = daysBetween(runStart, p.date);
+      for (const d of MAINTAIN_DAYS) if (days >= d && !milestones.some(m => m.days === d)) milestones.push({ days: d, date: p.date });
+    } else runStart = null;
+  }
+  const last = trend[trend.length - 1];
+  const inBand = Math.abs(last.kg - goalKg) <= band;
+  return {
+    since: reached.date, bandKg: band, trendKg: last.kg, offKg: last.kg - goalKg, inBand,
+    streakDays: inBand && runStart ? daysBetween(runStart, last.date) : 0, milestones,
+  };
 }
 
 /** Milestones in `after` that weren't in `before`, for a "you just hit…" message. */

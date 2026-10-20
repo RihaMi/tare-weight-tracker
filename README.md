@@ -83,6 +83,23 @@ On every pull request, GitHub Actions runs the unit tests, the browser tests and
 - Every weigh-in has an id and an `updatedAt` time, which a future sync would need to merge devices.
 - With a PIN, `createSaver` encrypts before saving (`src/lib/crypto.ts`) and `loadData` returns the encrypted envelope as `locked`; the lock screen decrypts it. Decrypting is the PIN check, so a wrong PIN can never produce data.
 
+## Logging a weight from a link
+
+Opening Tare with `?log=` fills in the entry form; one tap on **Save** logs it. Nothing is saved without that tap, and the link is removed from the address bar afterwards.
+
+| Part | Example | Default |
+|---|---|---|
+| `log` | `84.2` (a decimal comma works too) | required |
+| `unit` | `kg`, `lb` or `st` | the unit chosen in the app |
+| `date` | `2026-10-20` (not in the future) | today |
+| `note` | `after+a+run` | none |
+
+For example: `https://tare-weight-tracker.pages.dev/?log=84.2`
+
+**Android:** an automation app (for example Tasker), a home-screen shortcut or an NFC tag on the scale can open the link. The installed app and Chrome share their data, so the weigh-in lands in your usual Tare.
+
+**iPhone (Shortcuts and Siri):** make a shortcut with **Ask for Input** (Number, "Weight?"), then **URL** `https://…/?log=` followed by the answer, then **Open URLs**, and name it "Log my weight". Siri then runs it by name. One catch: iOS keeps a Home Screen web app's data separate from Safari's, and Shortcuts opens links in Safari. So this works if you use Tare in Safari, but not with Tare added to the Home Screen.
+
 ## Putting it online
 
 Tare is a static site: `npm run build` produces `dist/`, which any static host can serve. It needs HTTPS for the app install, offline mode and the icon shortcut to work, so test those on a real phone only once it's hosted.

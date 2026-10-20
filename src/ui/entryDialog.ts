@@ -4,6 +4,7 @@ import { calc, sortedEntries } from '../lib/calc';
 import { newMilestones } from '../lib/insights';
 import { milestoneLabel, milestonesFor } from './views/insights';
 import { todayISO } from '../lib/dates';
+import type { LinkedWeighIn } from '../lib/logLink';
 import { CM_IN, disp, fmtW, fromDisp, isMetric, splitStone } from '../lib/units';
 import { $, armOrRun } from './dom';
 import { t } from '../i18n';
@@ -31,16 +32,20 @@ function checkExists(): void {
   $('#eExists').hidden = !(d && d !== editing && profile().entries.some(e => e.date === d));
 }
 
-export function openEntry(date?: string | null, focusMeasures = false): void {
+/**
+ * Opens the form: empty for a new weigh-in, filled in to edit `date`, or filled
+ * in from a link (`linked`), in which case it asks to confirm and Save is focused.
+ */
+export function openEntry(date?: string | null, focusMeasures = false, linked?: LinkedWeighIn): void {
   const p = profile(), u = unit();
   const ex = date ? p.entries.find(e => e.date === date) : undefined;
   editing = ex ? ex.date : null;
-  $('#entryTitle').textContent = t(ex ? 'entry.editTitle' : 'entry.title');
+  $('#entryTitle').textContent = t(ex ? 'entry.editTitle' : linked ? 'entry.confirmTitle' : 'entry.title');
   const dateIn = $<HTMLInputElement>('#eDate');
-  dateIn.value = ex ? ex.date : todayISO();
+  dateIn.value = ex ? ex.date : linked?.date ?? todayISO();
   dateIn.max = todayISO();
-  weightInputs(ex ? ex.kg : sortedEntries(p).at(-1)?.kg ?? null);
-  $<HTMLTextAreaElement>('#eNote').value = ex?.note ?? '';
+  weightInputs(ex ? ex.kg : linked?.kg ?? sortedEntries(p).at(-1)?.kg ?? null);
+  $<HTMLTextAreaElement>('#eNote').value = ex?.note ?? linked?.note ?? '';
   $('#eMeas').innerHTML = MEASURES.map(([k]) => {
     const l = measureLabel(k);
     const v = ex?.measures?.[k];
@@ -52,6 +57,7 @@ export function openEntry(date?: string | null, focusMeasures = false): void {
   checkExists();
   dlg().showModal();
   setTimeout(() => {
+    if (linked) { $<HTMLButtonElement>('#entryForm button[type=submit]').focus(); return; }
     const target = focusMeasures ? $<HTMLInputElement>('#m_waist') : ($<HTMLInputElement>('#eW') ?? $<HTMLInputElement>('#eSt'));
     target?.select();
   }, 30);

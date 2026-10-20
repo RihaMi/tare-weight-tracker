@@ -1,5 +1,6 @@
 import { daysBetween, isISODate } from '../lib/dates';
 import { LB } from '../lib/units';
+import { startsFromFlowDays } from '../lib/cycle';
 import { parseCSVRows } from './backup';
 import { DataError, MEASURES, cleanComposition, newId, type Entry, type Measures } from './schema';
 
@@ -30,6 +31,7 @@ export interface ImportPreview {
   skipped: number;           // rows that couldn't be read
   sameDay: number;           // extra weigh-ins on a day already counted (the earliest is kept)
   sources?: string[];        // Apple Health: the apps and devices the weights came from, most first
+  periodStarts?: string[];   // Apple Health: period start days, from menstrual flow records
 }
 
 const TO_KG: Record<WeightUnit, number> = { kg: 1, lb: LB, st: 14 * LB };
@@ -293,6 +295,7 @@ export function parseAnyCSV(text: string, preferMDY = false): ImportPreview {
 
 const BODY_MASS = 'HKQuantityTypeIdentifierBodyMass';
 const BODY_FAT = 'HKQuantityTypeIdentifierBodyFatPercentage';
+const FLOW = 'HKCategoryTypeIdentifierMenstrualFlow';
 const HEALTH_UNITS: Record<string, [WeightUnit, number]> = { kg: ['kg', 1], lb: ['lb', 1], st: ['st', 1], g: ['kg', 0.001] };
 
 const attr = (tag: string, name: string): string | undefined => tag.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1];
@@ -306,6 +309,7 @@ export async function parseHealthXML(stream: ReadableStream<string>): Promise<Im
   const reader = stream.getReader();
   const out: ImportRow[] = [];
   const fatByDate = new Map<string, { time: string; pct: number }>(); // body fat, the earliest reading of each day
+  const flowDays = new Set<string>();
   const sources = new Map<string, number>();
   let buf = '', skipped = 0, sawHealth = false;
   const take = (upTo: number) => {
@@ -313,6 +317,12 @@ export async function parseHealthXML(stream: ReadableStream<string>): Promise<Im
     if (!sawHealth && part.includes('<HealthData')) sawHealth = true;
     for (const m of part.matchAll(/<Record\s[^>]*>/g)) {
       const tag = m[0];
+      if (tag.includes(FLOW) && attr(tag, 'type') === FLOW) {
+        // "None" means a logged day without flow; any other value is a flow day.
+        const date = (attr(tag, 'startDate') ?? '').slice(0, 10);
+        if (isISODate(date) && !/None$/.test(attr(tag, 'value') ?? '')) flowDays.add(date);
+        continue;
+      }
       if (tag.includes(BODY_FAT) && attr(tag, 'type') === BODY_FAT) {
         const start = attr(tag, 'startDate') ?? '', v = parseFloat(attr(tag, 'value') ?? '');
         const date = start.slice(0, 10), time = start.slice(11, 16);
@@ -351,6 +361,7 @@ export async function parseHealthXML(stream: ReadableStream<string>): Promise<Im
   return {
     source: 'health', rows: one.rows, unit: units.size === 1 ? [...units][0] : 'kg', skipped, sameDay: one.sameDay,
     sources: [...sources.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => s),
+    ...(flowDays.size ? { periodStarts: startsFromFlowDays([...flowDays]) } : {}),
   };
 }
 

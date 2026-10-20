@@ -6,7 +6,8 @@ import { isISODate } from '../lib/dates';
 // v1: original single-file app. v2: entry ids and timestamps. v3: app settings.
 // v4: events on each profile (medication, holiday…). v5: goal steps on each profile.
 // v6: body composition (body fat, muscle, water) on weigh-ins.
-export const SCHEMA_VERSION = 6;
+// v7: cycle tracking and period start days on each profile.
+export const SCHEMA_VERSION = 7;
 
 export type Unit = 'kg' | 'lb' | 'st';
 export type Sex = 'f' | 'm';
@@ -64,6 +65,8 @@ export interface Profile {
   entries: Entry[];
   events: WeightEvent[]; // oldest first
   goalSteps: GoalStep[]; // in any order; see orderedSteps()
+  cycleTracking: boolean; // off by default; see src/lib/cycle.ts
+  periodStarts: string[]; // YYYY-MM-DD, oldest first
   sample?: boolean;
   updatedAt: number;
 }
@@ -106,7 +109,7 @@ export const newId = (prefix = ''): string =>
 export function blankProfile(name = 'Me'): Profile {
   return {
     id: newId('p_'), name, sex: 'f', birthYear: null, heightCm: null, frame: 'medium', activity: 1.375,
-    goalKg: null, goalDate: null, entries: [], events: [], goalSteps: [], updatedAt: Date.now(),
+    goalKg: null, goalDate: null, entries: [], events: [], goalSteps: [], cycleTracking: false, periodStarts: [], updatedAt: Date.now(),
   };
 }
 
@@ -197,6 +200,9 @@ function cleanProfile(v: unknown, now: number): Profile | null {
       .sort((a, b) => (a.start < b.start ? -1 : 1)),
     // Before v5 there were no goal steps.
     goalSteps: (Array.isArray(o.goalSteps) ? o.goalSteps : []).map(cleanStep).filter((s): s is GoalStep => !!s).slice(0, 20),
+    // Before v7 there was no cycle tracking.
+    cycleTracking: o.cycleTracking === true,
+    periodStarts: [...new Set((Array.isArray(o.periodStarts) ? o.periodStarts : []).filter(isISODate))].sort(),
     updatedAt: num(o.updatedAt) ?? now,
   };
   if (o.sample === true) p.sample = true;

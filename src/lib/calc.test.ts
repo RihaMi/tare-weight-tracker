@@ -8,7 +8,7 @@ const entry = (date: string, kg: number): Entry => ({ id: date, date, kg, update
 function profile(over: Partial<Profile> = {}): Profile {
   return {
     id: 'p', name: 'Test', sex: 'm', birthYear: 1988, heightCm: 180, frame: 'medium', activity: 1.375,
-    goalKg: 80, goalDate: '2026-07-20', updatedAt: 0, events: [], goalSteps: [],
+    goalKg: 80, goalDate: '2026-07-20', updatedAt: 0, events: [], goalSteps: [], cycleTracking: false, periodStarts: [],
     entries: [entry('2026-01-01', 100), entry('2026-02-20', 95), entry('2026-04-11', 90)],
     ...over,
   };

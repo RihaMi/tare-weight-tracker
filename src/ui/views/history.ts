@@ -36,7 +36,7 @@ export function historyView(): string {
       ${m.items.map(({ e, prev, q }) => `<button type="button" class="row" data-edit="${e.date}">
         <span class="dot ${q}" title="${qText(q)}"></span>
         <span class="d">${fmtDate(e.date, { day: 'numeric', month: 'short' })}<small>${fmtDate(e.date, { weekday: 'long' })}</small></span>
-        <span class="n">${e.note ? esc(e.note) : e.measures ? t('history.measuresLogged') : ''}</span>
+        <span class="n">${e.note ? esc(e.note) : r.aroundPeriod.has(e.date) ? t('cycle.around') : e.measures ? t('history.measuresLogged') : ''}</span>
         <span class="w">${fmtW(e.kg, u)}</span>
         <span class="c">${prev ? fmtDelta(e.kg - prev.kg, u) : t('history.start')}</span>
       </button>`).join('')}</div></div>`;

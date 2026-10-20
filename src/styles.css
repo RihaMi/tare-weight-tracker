@@ -222,6 +222,10 @@ main { padding-top: 20px; display: grid; gap: 16px; }
 /* Events: one colour per kind, on the chart and in the Events list. */
 .k-medication { color: var(--c-fat); } .k-holiday { color: var(--warn-fill); } .k-illness { color: var(--bad-fill); }
 .k-training { color: var(--good-fill); } .k-diet { color: var(--c-carbs); } .k-other { color: var(--muted); }
+.chart-box .cycle { fill: var(--c-fat); opacity: .08; }
+.chart-box .cycle.expected { fill: none; opacity: .5; stroke: var(--c-fat); stroke-width: 1; stroke-dasharray: 3 3; }
+.cycle-edit { margin-top: 18px; display: grid; gap: 8px; }
+#ePeriodWrap[hidden] { display: none; }
 .chart-box .ev-band { fill: currentColor; opacity: .1; }
 .chart-box .ev-line { stroke: currentColor; stroke-width: 1.5; stroke-dasharray: 3 3; }
 .chart-box .ev-t { fill: var(--muted); font-family: var(--f-body); font-size: .64rem; font-weight: 600; }

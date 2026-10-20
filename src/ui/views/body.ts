@@ -12,6 +12,15 @@ export const measureLabel = (k: string): string => t(`measure.${k}` as Key);
 export function bodyView(): string {
   const p = profile(), r = calc(p), u = unit();
   const withM = r.E.filter(e => e.measures);
+  const howToText = t(p.sex === 'm' ? 'body.howTo.m' : 'body.howTo.f');
+  if (!withM.length) {
+    return `<section class="card empty">
+      <h2>${t('body.emptyTitle')}</h2>
+      <p class="muted measure">${t('body.emptyText')}</p>
+      <button type="button" class="btn primary" data-act="logMeas">${t('body.add')}</button>
+      <p class="note measure">${howToText}</p>
+    </section>`;
+  }
   const cards = MEASURES.map(([k]) => {
     const label = measureLabel(k);
     const series = withM.filter(e => e.measures![k] != null);
@@ -29,6 +38,6 @@ export function bodyView(): string {
       ${whtr ? `<dt>${t('body.whtr')}</dt><dd>${fmtNum(whtr, 2)} <span class="muted">${t(whtr < 0.5 ? 'body.whtrGood' : 'body.whtrAim')}</span></dd>` : ''}
       ${r.navyBF ? `<dt>${t('body.navy')}</dt><dd>${fmtNum(r.navyBF)} %</dd>` : ''}
     </dl>` : ''}
-    <p class="note">${t(p.sex === 'm' ? 'body.howTo.m' : 'body.howTo.f')}</p>
+    <p class="note">${howToText}</p>
   </section>`;
 }

@@ -164,6 +164,13 @@ function showImportConfirm(reading?: string): void {
 /** Clears a half-finished import when leaving the screen. */
 export const resetImport = (): void => { pendingImport = null; };
 
+/** Why a picked file couldn't be used, in the panel where its preview would have been. */
+function showFileProblem(box: string, name: string, e: unknown): void {
+  const el = $(box);
+  el.hidden = false;
+  el.innerHTML = `<div class="warnbox" role="alert"><p class="flush"><b>${esc(name)}</b>: ${esc(fileError(e))}</p></div>`;
+}
+
 const fileStamp = () => todayISO();
 const todayISOFrom = (ms: number) => todayISO(new Date(ms));
 
@@ -226,7 +233,7 @@ export function bindProfile(): void {
     const file = await pickTextFile('.json,application/json');
     if (!file) return;
     try { pendingRestore = { data: parseBackup(file.text), name: file.name }; showRestoreConfirm(); }
-    catch (e) { toast(fileError(e)); }
+    catch (e) { pendingRestore = null; showFileProblem('#restoreConfirm', file.name, e); }
   });
   $('#csvDownload').addEventListener('click', () => {
     download(`tare-${slug(p.name)}-${fileStamp()}.csv`, toCSV(p), 'text/csv');
@@ -243,7 +250,7 @@ export function bindProfile(): void {
       pendingImport = { name: file.name, preview, unit: guessUnit(preview) };
       showImportConfirm();
       $('#importConfirm')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    } catch (e) { showImportConfirm(); toast(fileError(e)); }
+    } catch (e) { showFileProblem('#importConfirm', file.name, e); }
   });
   showImportConfirm();
 }

@@ -5,6 +5,8 @@ import { expect, test } from '@playwright/test';
 test('the chart can be explored with the arrow keys', async ({ page }) => {
   await page.goto('/');
   const chart = page.locator('#chartBox');
+  // Keys pressed before the chart is drawn would be lost, so wait for it first.
+  await expect(chart.locator('svg')).toBeVisible();
   await expect(chart).toHaveAttribute('aria-label', /arrow keys/);
   await chart.focus();
   await page.keyboard.press('End');

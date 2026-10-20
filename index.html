@@ -42,6 +42,10 @@
       <span data-i18n="app.newVersion">A new version of Tare is ready.</span>
       <button type="button" class="btn primary" id="updateGo" data-i18n="app.reload">Reload</button>
     </div>
+    <div class="banner error" id="errorBar" role="alert" hidden>
+      <span data-i18n="app.errorBar">Something went wrong. Reloading usually fixes it.</span>
+      <span class="actions"><button type="button" class="btn" id="errorClose" data-i18n="common.close">Close</button><button type="button" class="btn primary" id="errorReload" data-i18n="app.reload">Reload</button></span>
+    </div>
     <main id="view"><p class="note" data-i18n="app.loading">Loading…</p></main>
   </div>
 

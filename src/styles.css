@@ -155,6 +155,11 @@ main { padding-top: 20px; display: grid; gap: 16px; }
   background: var(--accent-soft); border: 1px dashed var(--accent); border-radius: var(--r); padding: 10px 14px; font-size: .92rem;
 }
 .banner.update { margin-top: 16px; border-style: solid; }
+.banner.error { margin-top: 16px; background: var(--bad-soft); border-color: var(--bad); border-style: solid; }
+/* When Tare can't start safely, only the problem screen is usable. */
+.halted .top .ctrl, .halted .tabs { display: none; }
+.card.problem { display: grid; gap: 12px; max-width: 640px; }
+.card.problem code { overflow-wrap: anywhere; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; box-shadow: var(--shadow); min-width: 0; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .grid-2 { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); align-items: start; }

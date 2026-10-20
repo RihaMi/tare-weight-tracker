@@ -56,7 +56,7 @@ export const cs: Record<Key, string | Plural> = {
   'sample.note64': 'Tento týden stagnace, ale vydržel jsem',
   'sample.note88': 'Narozeninová večeře',
   'sample.note110': 'Džíny už jsou volné',
-  'profile.defaultName': 'Já',
+  'profile.defaultName': 'Můj profil',
   'profile.newName': 'Nový profil',
   'profile.unnamed': 'Bez jména',
 
@@ -80,7 +80,12 @@ export const cs: Record<Key, string | Plural> = {
   'entry.invalid': 'Zadejte datum a váhu mezi {min} a {max}.',
   'entry.updated': 'Vážení upraveno',
   'entry.logged': 'Zapsáno {w}',
-  'entry.deleted': 'Záznam smazán',
+  'entry.deleted': 'Vážení smazáno',
+  'undo.label': 'Zpět',
+  'undo.hint': 'Vrátit lze klávesami Ctrl+Z.',
+  'undo.hintMac': 'Vrátit lze klávesami Command+Z.',
+  'undo.done': 'Obnoveno',
+  'undo.cant': 'To už nejde vrátit.',
   'entry.milestone': 'Milník: {label}!',
 
   'measure.waist': 'Pas',

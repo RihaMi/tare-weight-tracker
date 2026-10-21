@@ -16,6 +16,7 @@ import { bodyView } from './ui/views/body';
 import { bindCalories, caloriesView, resetCalories } from './ui/views/calories';
 import { historyView, toggleWeeks } from './ui/views/history';
 import { overviewView, rememberChartTable, replanLater } from './ui/views/overview';
+import { closeRecap } from './ui/views/insights';
 import { bindProfile, downloadBackup, profileView, resetImport } from './ui/views/profile';
 import { backupNudge } from './lib/backupNudge';
 import { announceSaved, initTabSync } from './ui/sync';
@@ -284,6 +285,7 @@ function bindGlobalEvents(): void {
         break;
       }
       case 'replanLater': replanLater(profile()); render(); break;
+      case 'closeRecap': closeRecap(profile(), a.dataset.month!); render(); break;
       case 'backupNow': downloadBackup(); break;
       case 'resumeAutoBackup': void resumeAutoBackup().then(ok => toast(t(ok ? 'autobackup.resumed' : 'autobackup.notAllowed'))); break;
       case 'retrySave': void app.persist(app.data); break;

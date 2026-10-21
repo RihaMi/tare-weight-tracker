@@ -4,7 +4,9 @@ import { t, tn, type Key } from '../../i18n';
 import type { Stats } from '../../lib/calc';
 import { fmtDate, todayISO } from '../../lib/dates';
 import { milestoneStepKg, milestones, plateau, streaks, weekdayPattern, weeklyAverages, weekStart, type Milestone, type NextMilestone } from '../../lib/insights';
+import { monthRecap, previousMonth } from '../../lib/recap';
 import { LB, fmtDelta, fmtW } from '../../lib/units';
+import { esc } from '../dom';
 
 /** A milestone amount in the unit people think in: 5 kg, 10 lb, 1 st. */
 export function fmtStep(kg: number, u: Unit): string {
@@ -43,6 +45,41 @@ export const milestonesFor = (p: Profile, r: Stats) => milestones({ entries: r.E
 
 const msItem = (m: Milestone, dir: number, u: Unit, date: string) =>
   `<li><span class="ms-dot ${m.kind}"></span><span>${milestoneLabel(m, dir, u)}</span><span class="muted">${date}</span></li>`;
+
+// The month recap shows in the first week of a month, about the month before, until closed.
+const RECAP_CLOSED_KEY = 'tare.recapClosed';
+function recapClosed(): Record<string, string> {
+  try { const v = JSON.parse(localStorage.getItem(RECAP_CLOSED_KEY) ?? '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; }
+}
+export function closeRecap(p: Profile, month: string): void {
+  try { localStorage.setItem(RECAP_CLOSED_KEY, JSON.stringify({ ...recapClosed(), [p.id]: month })); } catch { /* shows again next time */ }
+}
+
+/** Last month at a glance: trend change, average, days logged, best week, milestones and events. */
+export function recapCard(p: Profile, r: Stats): string {
+  const today = todayISO();
+  if (Number(today.slice(8, 10)) > 7) return '';
+  const month = previousMonth(today);
+  if (recapClosed()[p.id] === month) return '';
+  const rc = monthRecap(r.E, month, r.dir);
+  if (!rc) return '';
+  const u = unit(), short = (d: string) => fmtDate(d, { day: 'numeric', month: 'short' });
+  const toward = (v: number) => (r.dir * v > 0.05 ? 'good' : r.dir * v < -0.05 ? 'bad' : '');
+  const tiles: Array<[string, string, string]> = [
+    [t('recap.change'), fmtDelta(rc.changeKg, u), toward(rc.changeKg)],
+    [t('recap.avg'), fmtW(rc.avgKg, u), ''],
+    [t('recap.days'), t('recap.daysValue', { n: rc.daysLogged, d: rc.daysInMonth }), ''],
+    rc.bestWeek ? [t('recap.best', { date: short(rc.bestWeek.week) }), fmtDelta(rc.bestWeek.changeKg, u), 'good'] : [t('recap.noBest'), '—', ''],
+  ];
+  const reached = milestonesFor(p, r).achieved.filter(m => m.date.startsWith(month));
+  const started = p.events.filter(ev => ev.start.startsWith(month));
+  return `<section class="card recap">
+    <div class="card-head"><h2>${t('recap.title', { month: fmtDate(month + '-01', { month: 'long' }) })}</h2><button type="button" class="btn ghost small-btn" data-act="closeRecap" data-month="${month}">${t('common.close')}</button></div>
+    <div class="stats">${tiles.map(([k, v, c]) => `<div class="stat"><span class="v ${c}">${esc(v)}</span><span class="k">${k}</span></div>`).join('')}</div>
+    ${reached.length ? `<h3 class="sub-h">${t('recap.milestones')}</h3><ul class="ms-list compact">${reached.map(m => msItem(m, r.dir, u, short(m.date))).join('')}</ul>` : ''}
+    ${started.length ? `<h3 class="sub-h">${t('recap.events')}</h3><ul class="recap-events">${started.map(ev => `<li>${esc(ev.label)} <span class="muted">${short(ev.start)}</span></li>`).join('')}</ul>` : ''}
+  </section>`;
+}
 
 export function thisWeekCard(p: Profile, r: Stats): string {
   const u = unit(), today = todayISO();

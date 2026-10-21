@@ -12,7 +12,7 @@ import { nextStep, stepsReached } from '../../lib/steps';
 import { fmtInt, fmtNum } from '../../lib/format';
 import { deltaUnit, disp, fmtDelta, fmtPace, fmtW, splitStone } from '../../lib/units';
 import { esc } from '../dom';
-import { thisWeekCard } from './insights';
+import { recapCard, thisWeekCard } from './insights';
 
 const RANGES: ReadonlyArray<readonly [number, Key]> = [[30, 'chart.1m'], [90, 'chart.3m'], [180, 'chart.6m'], [365, 'chart.1y'], [0, 'chart.all']];
 
@@ -201,5 +201,5 @@ export function overviewView(): string {
   }
   // Calories sit under the chart on wide screens, so the two columns end at about the same height,
   // and come last again once the columns stack.
-  return `<div class="grid-2"><div class="col">${hero(p, r)}${chartCard(r)}<div class="last-when-stacked">${calorieCard(p, r)}</div></div><div class="col">${thisWeekCard(p, r)}${statsCard(p, r)}${bmiCard(p, r)}</div></div>`;
+  return `${recapCard(p, r)}<div class="grid-2"><div class="col">${hero(p, r)}${chartCard(r)}<div class="last-when-stacked">${calorieCard(p, r)}</div></div><div class="col">${thisWeekCard(p, r)}${statsCard(p, r)}${bmiCard(p, r)}</div></div>`;
 }

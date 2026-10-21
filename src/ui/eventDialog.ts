@@ -2,6 +2,7 @@ import { app, commit, profile } from '../app';
 import { EVENT_KINDS, newId, type EventKind, type WeightEvent } from '../data/schema';
 import { t } from '../i18n';
 import { isISODate, todayISO } from '../lib/dates';
+import { eventDeleted } from '../lib/deletions';
 import { $, armOrRun, esc } from './dom';
 import { commitWithUndo } from './undo';
 import { eventKindLabel } from './views/events';
@@ -72,6 +73,7 @@ function save(): void {
 function remove(): void {
   const p = profile(), gone = editing!;
   p.events = p.events.filter(e => e.id !== gone.id);
+  eventDeleted(p, gone.id);
   p.updatedAt = Date.now();
   dialog().close();
   commitWithUndo(t('events.deleted'), () => {

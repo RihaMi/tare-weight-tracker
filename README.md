@@ -60,7 +60,7 @@ There's no account or server, so each device keeps its own data. To bring them t
 
 - **New things are added:** profiles, weigh-ins and events that aren't on this device yet.
 - **The newer copy wins** where both have the same thing (a weigh-in on the same date, the same event, a profile's details).
-- **Nothing is deleted.** Something removed on this device but still in the backup comes back, so delete it again after merging.
+- **Deletes stick.** Something deleted on either device stays deleted after merging, unless it was changed after the delete.
 - **This device keeps** its settings, PIN and language.
 - **Undo** takes a merge back for a few seconds afterwards.
 

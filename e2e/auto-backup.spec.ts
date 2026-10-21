@@ -81,7 +81,7 @@ test('with a PIN, folder backups are encrypted, and restoring one asks for the P
   await expect(page.locator('#restorePinErr')).toHaveText("That PIN doesn't open this backup.", { timeout: 20_000 });
   await page.locator('#restorePin').fill('2580');
   await page.locator('#restorePinForm button[type=submit]').click();
-  await expect(page.locator('#restoreConfirm')).toContainText('nothing here is deleted', { timeout: 20_000 });
+  await expect(page.locator('#restoreConfirm')).toContainText('stays deleted', { timeout: 20_000 });
 });
 
 test('when the browser forgets the permission, backups pause and can be allowed again', async ({ page }) => {

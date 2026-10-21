@@ -36,12 +36,12 @@ async function logWeight(page: Page, value: string) {
 test('opens with the example profile, logs a weight and keeps it after a reload', async ({ page }) => {
   await open(page, '/');
   await expect(page.locator('#profileSel')).toContainText('example');
-  await logWeight(page, '88.8');
-  await expect(toast(page)).toContainText('88.8');
+  await logWeight(page, '86.6');
+  await expect(toast(page)).toContainText('86.6');
   await page.goto('/#history');
-  await expect(page.locator('.row .w').first()).toHaveText('88.8 kg');
+  await expect(page.locator('.row .w').first()).toHaveText('86.6 kg');
   await page.reload();
-  await expect(page.locator('.row .w').first()).toHaveText('88.8 kg');
+  await expect(page.locator('.row .w').first()).toHaveText('86.6 kg');
 });
 
 test('switches units', async ({ page }) => {
@@ -169,7 +169,7 @@ test('with a PIN, saved data is encrypted; turning it off saves it readable agai
   const slow = { timeout: 20_000 };
   await open(page, '/');
   await page.locator('#logBtn').click();
-  await page.locator('#eW').fill('88.8');
+  await page.locator('#eW').fill('86.6');
   await page.locator('#eNote').fill('private note 7391');
   await page.locator('#entryForm button[type=submit]').click();
   await expect.poll(async () => JSON.stringify(await stored(page))).toContain('private note 7391');
@@ -181,7 +181,7 @@ test('with a PIN, saved data is encrypted; turning it off saves it readable agai
   await page.locator('#pinForm button[type=submit]').click();
   await expect.poll(async () => (await stored(page) as { tare?: string })?.tare, slow).toBe('encrypted');
   const sealed = JSON.stringify(await stored(page));
-  for (const plain of ['private note 7391', 'Alex', '88.8', 'entries']) expect(sealed).not.toContain(plain);
+  for (const plain of ['private note 7391', 'Alex', '86.6', 'entries']) expect(sealed).not.toContain(plain);
 
   // The note is still there after unlocking.
   await page.reload();

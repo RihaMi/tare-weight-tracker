@@ -77,7 +77,7 @@ test('a failed save shows a banner until saving works again', async ({ page }) =
     IDBObjectStore.prototype.put = function () { throw new DOMException('test: disk full', 'QuotaExceededError'); };
   });
   await page.locator('#logBtn').click();
-  await page.locator('#eW').fill('88.8');
+  await page.locator('#eW').fill('86.6');
   await page.locator('#entryForm button[type=submit]').click();
   const banner = page.locator('.banner[role=alert]', { hasText: "couldn't be saved" });
   await expect(banner).toBeVisible();

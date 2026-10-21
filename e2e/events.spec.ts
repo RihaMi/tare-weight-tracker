@@ -15,7 +15,7 @@ test('the example profile shows its events on the chart and in History', async (
   await expect(page.locator('#chartBox .ev-t')).toHaveText(['Weekend away', 'Morning runs']);
   await page.goto('/#history');
   await expect(page.locator('#eventsCard li b')).toHaveText(['Morning runs', 'Weekend away']);
-  await expect(page.locator('#eventsCard li').first()).toContainText(/Trend since: [−+±]\d\.\d\d kg a week/);
+  await expect(page.locator('#eventsCard li').first()).toContainText(/Trend since: [−+±]\d\.\d\d\skg a week/);
 });
 
 test('an event can be added, edited, and deleted with Undo', async ({ page }) => {

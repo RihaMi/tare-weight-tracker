@@ -38,6 +38,9 @@ function mergeProfile(here: Profile, there: Profile, counts: MergeCounts): Profi
   }
   p.events = [...byId.values()].sort((a, b) => (a.start < b.start ? -1 : 1));
   p.periodStarts = [...new Set([...p.periodStarts, ...there.periodStarts])].sort();
+  // Past goals by id; they don't change once kept.
+  const goalIds = new Set(p.pastGoals.map(g => g.id));
+  p.pastGoals = [...p.pastGoals, ...there.pastGoals.filter(g => !goalIds.has(g.id)).map(g => structuredClone(g))].sort((a, b) => (a.to < b.to ? -1 : 1));
   p.updatedAt = Math.max(here.updatedAt, there.updatedAt);
   return p;
 }

@@ -8,7 +8,8 @@ import { isISODate } from '../lib/dates';
 // v6: body composition (body fat, muscle, water) on weigh-ins.
 // v7: cycle tracking and period start days on each profile.
 // v8: a unit (kg / lb / st) on each profile; AppData.unit is now the one new profiles start with.
-export const SCHEMA_VERSION = 8;
+// v9: past goals on each profile, kept when a new goal weight replaces one.
+export const SCHEMA_VERSION = 9;
 
 export type Unit = 'kg' | 'lb' | 'st';
 export type Sex = 'f' | 'm';
@@ -50,6 +51,17 @@ export interface WeightEvent {
   updatedAt: number;
 }
 
+/** A goal weight that a new one replaced, kept so the long-term story stays visible. */
+export interface PastGoal {
+  id: string;
+  from: string;           // YYYY-MM-DD: when it began (the first weigh-in, or when the goal before it was replaced)
+  to: string;             // YYYY-MM-DD: when it was replaced
+  startKg: number;        // the weight when it began
+  goalKg: number;
+  endKg: number;          // the weight when it was replaced
+  reached: string | null; // YYYY-MM-DD: the first weigh-in at or past the goal, if any
+}
+
 /** A weight to reach on the way to the goal, optionally by a date. */
 export interface GoalStep { id: string; kg: number; date: string | null }
 
@@ -69,6 +81,7 @@ export interface Profile {
   goalSteps: GoalStep[]; // in any order; see orderedSteps()
   cycleTracking: boolean; // off by default; see src/lib/cycle.ts
   periodStarts: string[]; // YYYY-MM-DD, oldest first
+  pastGoals: PastGoal[];  // oldest first
   sample?: boolean;
   updatedAt: number;
 }
@@ -111,7 +124,7 @@ export const newId = (prefix = ''): string =>
 export function blankProfile(name = 'Me', unit: Unit = 'kg'): Profile {
   return {
     id: newId('p_'), name, unit, sex: 'f', birthYear: null, heightCm: null, frame: 'medium', activity: 1.375,
-    goalKg: null, goalDate: null, entries: [], events: [], goalSteps: [], cycleTracking: false, periodStarts: [], updatedAt: Date.now(),
+    goalKg: null, goalDate: null, entries: [], events: [], goalSteps: [], cycleTracking: false, periodStarts: [], pastGoals: [], updatedAt: Date.now(),
   };
 }
 
@@ -179,6 +192,14 @@ function cleanStep(v: unknown): GoalStep | null {
   return { id: typeof o.id === 'string' && o.id ? o.id : newId('st_'), kg, date: isISODate(o.date) ? o.date : null };
 }
 
+function cleanPastGoal(v: unknown): PastGoal | null {
+  const o = obj(v);
+  if (!o || !isISODate(o.from) || !isISODate(o.to)) return null;
+  const startKg = num(o.startKg), goalKg = num(o.goalKg), endKg = num(o.endKg);
+  if (startKg == null || goalKg == null || endKg == null || [startKg, goalKg, endKg].some(kg => kg < 20 || kg > 400)) return null;
+  return { id: typeof o.id === 'string' && o.id ? o.id : newId('g_'), from: o.from, to: o.to, startKg, goalKg, endKg, reached: isISODate(o.reached) ? o.reached : null };
+}
+
 const asUnit = (v: unknown, fallback: Unit): Unit => (v === 'kg' || v === 'lb' || v === 'st' ? v : fallback);
 
 function cleanProfile(v: unknown, now: number, appUnit: Unit): Profile | null {
@@ -209,6 +230,9 @@ function cleanProfile(v: unknown, now: number, appUnit: Unit): Profile | null {
     // Before v7 there was no cycle tracking.
     cycleTracking: o.cycleTracking === true,
     periodStarts: [...new Set((Array.isArray(o.periodStarts) ? o.periodStarts : []).filter(isISODate))].sort(),
+    // Before v9 replaced goals weren't kept.
+    pastGoals: (Array.isArray(o.pastGoals) ? o.pastGoals : []).map(cleanPastGoal).filter((g): g is PastGoal => !!g)
+      .sort((a, b) => (a.to < b.to ? -1 : 1)).slice(-50),
     updatedAt: num(o.updatedAt) ?? now,
   };
   if (o.sample === true) p.sample = true;

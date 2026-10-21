@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.2.0",
   "description": "A modern weight tracker: goal pace, trend chart, BMI, calories and body measurements.",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",

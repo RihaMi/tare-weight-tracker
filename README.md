@@ -17,7 +17,7 @@ Inspired by the iOS app *Monitor Your Weight*, rebuilt with a cleaner, modern de
 **See where you are**
 - **Overview:** your weight as a big scale-style reading, a ruler from start to goal with your steps on the way, an On pace / Behind pace badge, and a trend chart (1 month to all time).
 - **Statistics:** total change, what's left, the average change per day and week, a likely goal date (as a range) and the weekly pace you need.
-- **History:** every weigh-in by month, each with a dot for on pace, slower, or away from the goal.
+- **History:** every weigh-in by month, each with a dot for on pace, slower, or away from the goal, and a search through your notes.
 - **Weekly averages, streaks and milestones** (every 5 kg / 10 lb / 1 st, a quarter of the way, reaching the goal, a better BMI category). Logging a weight that reaches one says so.
 - **Patterns:** plateaus, and the days of the week you tend to weigh more, each explained.
 
@@ -34,7 +34,7 @@ Inspired by the iOS app *Monitor Your Weight*, rebuilt with a cleaner, modern de
 - **Cycle-aware weigh-ins:** with cycle tracking on, the days around a period (water retention) are marked and left out of the pace check and patterns.
 
 **Logging made easy**
-- **Quick log:** the log form opens by itself if you haven't weighed in today (once a day; can be turned off). On an installed app, long-press the icon and choose **Log weight**.
+- **Quick log:** the log form opens by itself if you haven't weighed in today (once a day; can be turned off). On an installed app, long-press the icon and choose **Log weight**. On a keyboard, press **N**.
 - **Typo check:** a weight far from your trend (94.1 instead of 84.1) is questioned once before it's saved. A normal day-to-day swing never is.
 - **Reminders:** a daily reminder in the app if you haven't weighed in by your chosen time, a calendar file (.ics) with a daily alert, and an app icon badge.
 - **[Logging from a link](#logging-a-weight-from-a-link)** for Siri Shortcuts, NFC tags and automation apps.

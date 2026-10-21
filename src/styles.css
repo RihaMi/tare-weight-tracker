@@ -304,6 +304,8 @@ main { padding-top: 20px; display: grid; gap: 16px; }
 
 /* History */
 .month { margin-top: 6px; }
+.note-search { width: 100%; border: 1px solid var(--line); background: var(--surface-2); border-radius: 9px; padding: 9px 11px; color: var(--ink); margin-bottom: 4px; }
+.note-search:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
 .month h3 { font-size: .78rem; font-family: var(--f-body); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 14px 4px 6px; display: flex; justify-content: space-between; }
 .month h3 .mono { text-transform: none; letter-spacing: 0; } /* the month's change: "kg", not "KG" */
 .rows { display: grid; }

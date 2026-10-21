@@ -33,6 +33,7 @@ It was inspired by the iOS app *Monitor Your Weight* and rebuilt with a cleaner,
 - **Import from other apps.** Reads a CSV from almost any weight app, such as Monitor Your Weight. It finds the date and weight columns, the date order and the unit on its own. It can also read an Apple Health export (`export.zip`), even one of several hundred MB. A preview shows what will be added before anything is saved.
 - **Installable and offline.** A Progressive Web App you can add to your home screen. It works without internet.
 - **Light and dark mode.** Automatic (follows your device) by default, or pick Light or Dark under Profile & goal → App settings → Appearance.
+- **Printing.** Any screen prints (or saves as a PDF) in light colours, without the buttons and tabs, for example History to show a doctor.
 
 ## Development
 
@@ -59,7 +60,7 @@ src/
   ui/          screens (views/), chart, entry dialog, small DOM helpers
   app.ts       app state shared by the screens
   main.ts      start-up, navigation, install and update prompts
-public/        icons (regenerate with `npm run icons`)
+public/        icons (regenerate with `npm run icons`) and the install dialog's screenshots (`npm run build`, then `npm run screenshots`)
 .github/       CI: type-check, tests and build on every push
 ```
 

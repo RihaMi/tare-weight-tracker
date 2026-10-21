@@ -45,6 +45,22 @@ test('Ctrl+Z undoes too, but only while the message shows', async ({ page }) => 
   await expect(page.locator(`.row[data-edit="${second}"]`)).toHaveCount(0);
 });
 
+test('a second delete soon after the first still takes two taps, not three', async ({ page }) => {
+  // The first delete's 5-second disarm used to fire during the second one and undo its first tap.
+  await page.clock.install();
+  await ready(page, '/#history');
+  await deleteFirstWeighIn(page);
+  await page.clock.runFor(3000);
+  const row = page.locator('.row').first();
+  const second = (await row.getAttribute('data-edit'))!;
+  await row.click();
+  await page.locator('#eDelete').click();
+  await page.clock.runFor(2500); // past 5 seconds since the first delete, not since this one
+  await expect(page.locator('#eDelete')).toHaveText('Confirm delete');
+  await page.locator('#eDelete').click();
+  await expect(page.locator(`.row[data-edit="${second}"]`)).toHaveCount(0);
+});
+
 test('removing the example profile can be undone', async ({ page }) => {
   await ready(page, '/');
   await page.locator('[data-act=clearSample]').click();

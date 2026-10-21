@@ -22,6 +22,7 @@ import { announceSaved, initTabSync } from './ui/sync';
 import { keyInfoFor, newKeyInfo, seal, unseal, type Envelope } from './lib/crypto';
 import { verifyPin } from './lib/pin';
 import { initPasskeySupport } from './lib/passkey';
+import { askToKeep } from './ui/keepData';
 import { migrate } from './data/schema';
 import { resetSettingsForm } from './ui/views/settings';
 import { updateBadge } from './ui/badge';
@@ -368,6 +369,9 @@ function applyLanguage(): void {
   }
 }
 
+// Asks the browser to keep the data once there are weigh-ins, then shows the answer on Profile.
+const keepData = (): void => { void askToKeep(app.data).then(changed => { if (changed && app.tab === 'profile') render(); }); };
+
 async function start(): Promise<void> {
   setupErrorBar();
   const store = await openStore();
@@ -391,7 +395,7 @@ async function start(): Promise<void> {
   applyLanguage();
   applyTheme(app.data.settings.theme);
   // With a PIN (and its key, once unlocked) every save is encrypted.
-  const save = createSaver(store, () => setSaveFailed(true), d => (d.settings.pin && app.key ? seal(d, app.key) : d), () => { setSaveFailed(false); scheduleAutoBackup(); });
+  const save = createSaver(store, () => setSaveFailed(true), d => (d.settings.pin && app.key ? seal(d, app.key) : d), () => { setSaveFailed(false); scheduleAutoBackup(); keepData(); });
   void initAutoBackup(() => render());
   app.persist = d => save(d).then(announceSaved);
   const h = location.hash.slice(1);
@@ -400,7 +404,6 @@ async function start(): Promise<void> {
   app.render = render;
   const firstVisit = !data && !locked;
   if (firstVisit) void app.persist(app.data); // first run only: never write over encrypted data
-  void navigator.storage?.persist?.();
   void initPasskeySupport().then(() => { if (app.tab === 'profile') render(); });
   // Fonts used to come from Google and were cached separately; they're part of the app now.
   void globalThis.caches?.delete('google-fonts').catch(() => {});
@@ -413,6 +416,7 @@ async function start(): Promise<void> {
   setupAutoLock();
   const afterUnlock = () => {
     render();
+    keepData();
     if (imported) toast(t('app.importedLegacy'));
     if (launchedToLog()) handleLaunchAction();
     else if (firstVisit && shouldOfferSetup()) openSetup({ firstRun: true });

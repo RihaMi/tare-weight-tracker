@@ -17,6 +17,7 @@ import { addDays, fmtDate, todayISO } from '../../lib/dates';
 import { CM_IN, deltaUnit, disp, fmtW, fromDisp, isMetric } from '../../lib/units';
 import { $, armOrRun, download, esc, pickFile, pickTextFile, toast } from '../dom';
 import { isIOSBrowserTab } from '../../lib/backupNudge';
+import { keepState } from '../keepData';
 import { resetCalories } from './calories';
 import { activityKey } from './overview';
 import { bindSettings, settingsCard } from './settings';
@@ -70,7 +71,7 @@ export function profileView(): string {
 
   <section class="card">
     <div class="card-head"><h2>${t('backup.title')}</h2></div>
-    <p class="note flush ${app.store.kind === 'memory' ? 'warnbox' : ''}">${t(`store.${app.store.kind}` as Key)} ${t('backup.intro')}</p>
+    <p class="note flush ${app.store.kind === 'memory' ? 'warnbox' : ''}">${t(`store.${app.store.kind}` as Key)} ${app.store.kind !== 'memory' && keepState() !== 'unknown' ? t(`store.${keepState()}` as Key) : ''} ${t('backup.intro')}</p>
     ${isIOSBrowserTab() ? `<p class="warnbox">${t('backup.ios')}</p>` : ''}
     <div class="backup-grid">
       <div class="bk">

@@ -4,6 +4,8 @@ A modern weight tracker that runs in the browser and installs on your phone like
 
 It was inspired by the iOS app *Monitor Your Weight* and rebuilt with a cleaner, modern design.
 
+**Open it at [rihami.github.io/tare-weight-tracker](https://rihami.github.io/tare-weight-tracker/)**, then add it to your home screen.
+
 ## Features
 
 - **Overview.** A big scale-style reading of your current weight, a ruler from start weight to goal, an "On pace / Behind pace" badge and a trend chart (1M to All).
@@ -115,7 +117,7 @@ Opening Tare with `?log=` fills in the entry form; one tap on **Save** logs it. 
 | `date` | `2026-10-20` (not in the future) | today |
 | `note` | `after+a+run` | none |
 
-For example: `https://tare-weight-tracker.pages.dev/?log=84.2`
+For example: `https://rihami.github.io/tare-weight-tracker/?log=84.2`
 
 **Android:** an automation app (for example Tasker), a home-screen shortcut or an NFC tag on the scale can open the link. The installed app and Chrome share their data, so the weigh-in lands in your usual Tare.
 
@@ -124,6 +126,12 @@ For example: `https://tare-weight-tracker.pages.dev/?log=84.2`
 ## Putting it online
 
 Tare is a static site: `npm run build` produces `dist/`, which any static host can serve. It needs HTTPS for the app install, offline mode and the icon shortcut to work, so test those on a real phone only once it's hosted.
+
+**GitHub Pages (how Tare is published)**
+
+`.github/workflows/pages.yml` builds the app and publishes it to [rihami.github.io/tare-weight-tracker](https://rihami.github.io/tare-weight-tracker/) on every merge into `main`, after the type check and unit tests pass. It can also be run from the Actions tab (**Deploy to GitHub Pages → Run workflow**). The build uses relative paths, so it works from the `/tare-weight-tracker/` sub-path. GitHub Pages doesn't read `public/_headers` (see below); the content security policy still applies, because it's part of the page.
+
+Another host can be used instead, for example to keep the repository private:
 
 **Cloudflare Pages (free, works with a private repository)**
 
@@ -134,7 +142,7 @@ Tare is a static site: `npm run build` produces `dist/`, which any static host c
 
 Netlify works the same way: **Add new site → Import an existing project**, with the same build command and `dist` as the publish directory.
 
-Both hosts read `public/_headers`. It sets security headers (no framing, no referrer, no camera or location access) and caching: the built files are kept for a year, while the page and service worker are always checked for a new version. The build also adds a content security policy to the page (`vite.config.ts`). The page may load only its own files, and inline scripts are blocked.
+Cloudflare Pages and Netlify read `public/_headers`. It sets security headers (no framing, no referrer, no camera or location access) and caching: the built files are kept for a year, while the page and service worker are always checked for a new version. The build also adds a content security policy to the page (`vite.config.ts`). The page may load only its own files, and inline scripts are blocked.
 
 Anyone with the address can open the site, but each person's data stays in their own browser. Nothing is sent to the host.
 

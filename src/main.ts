@@ -29,6 +29,7 @@ import { updateBadge } from './ui/badge';
 import { initLock, isLocked, showLock } from './ui/lock';
 import { applyTheme } from './ui/theme';
 import { commitWithUndo, initUndoShortcut } from './ui/undo';
+import { initFigures } from './ui/figures';
 import { isPastTime } from './lib/ics';
 import { todayISO } from './lib/dates';
 import { parseLogLink } from './lib/logLink';
@@ -410,6 +411,7 @@ async function start(): Promise<void> {
   initEntryDialog();
   initLock();
   initUndoShortcut();
+  initFigures($('#view'));
   bindGlobalEvents();
   initTabSync(onExternalChange, env => lockNow(env));
   setupInstall();

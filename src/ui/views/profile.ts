@@ -268,7 +268,7 @@ function autoBackupBlock(): string {
   if (s.kind === 'unsupported') body = `<p class="note flush">${t('autobackup.unsupported')}</p>`;
   else if (s.kind === 'off') {
     body = `<p class="note flush">${t('autobackup.offText')}</p>${pinNote}
-      <div class="actions start"><button type="button" class="btn primary" id="abChoose">${t('autobackup.choose')}</button></div>`;
+      <div class="actions start"><button type="button" class="btn" id="abChoose">${t('autobackup.choose')}</button></div>`;
   } else if (s.kind === 'on') {
     body = `<p class="note flush">${t('autobackup.onText', { folder: esc(s.folder) })} ${s.lastAt ? t('autobackup.last', { time: backupTime(s.lastAt) }) : ''}</p>${pinNote}
       <div class="actions start"><button type="button" class="btn" id="abNow">${t('autobackup.now')}</button><button type="button" class="btn" id="abStop">${t('autobackup.stop')}</button></div>`;

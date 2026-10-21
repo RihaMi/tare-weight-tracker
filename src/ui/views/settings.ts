@@ -61,7 +61,7 @@ export function settingsCard(): string {
           <p class="note flush">${on ? t('settings.pinOn', { n: s.pin!.length }) : t('settings.pinOff')} ${t('settings.pinNote')}</p></div>
         <div class="setting-ctl">${on
           ? `<button type="button" class="btn" data-pin="change">${t('settings.pinChange')}</button><button type="button" class="btn danger" data-pin="remove">${t('settings.pinTurnOff')}</button>`
-          : `<button type="button" class="btn primary" data-pin="set">${t('settings.pinSet')}</button>`}</div>
+          : `<button type="button" class="btn" data-pin="set">${t('settings.pinSet')}</button>`}</div>
         ${pinForm()}
         ${on && passkeySupported() ? `<div class="passkey-row"><p class="note flush">${t(passkeyEnabled() ? 'settings.passkeyIsOn' : 'settings.passkeyText')}</p>
           ${passkeyEnabled() ? `<button type="button" class="btn btn-wrap" id="passkeyOff" aria-label="${esc(t('settings.passkeyOffLabel'))}">${t('settings.passkeyOff')}</button>`

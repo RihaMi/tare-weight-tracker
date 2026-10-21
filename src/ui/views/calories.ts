@@ -154,7 +154,7 @@ export function updateCalories(): void {
 
   box.innerHTML = `
     <p class="eyebrow">${t('calc.eatAbout')}</p>
-    <div class="kcal">${fmtInt(target)}<small>${t('calc.kcalDay')}</small></div>
+    <div class="kcal"><span>${fmtInt(target)}</span><small>${t('calc.kcalDay')}</small></div>
     <p class="result-sub">${goalLabel}</p>
     ${plan.floored ? `<p class="warnbox">${t('calc.floored', { floor: fmtInt(calorieFloor(i.sex)) })}</p>` : ''}
     ${plan.tooFast && !plan.floored ? `<p class="warnbox">${t('calc.tooFast')}</p>` : ''}

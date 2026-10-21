@@ -12,7 +12,6 @@ import { drawChart } from './ui/chart';
 import { $, esc, toast } from './ui/dom';
 import { initEntryDialog, openEntry } from './ui/entryDialog';
 import { openEvent } from './ui/eventDialog';
-import { openShare } from './ui/shareCard';
 import { bodyView } from './ui/views/body';
 import { bindCalories, caloriesView, resetCalories } from './ui/views/calories';
 import { historyView, toggleWeeks } from './ui/views/history';
@@ -268,7 +267,7 @@ function bindGlobalEvents(): void {
     switch (a.dataset.act) {
       case 'log': openEntry(); break;
       case 'addEvent': openEvent(); break;
-      case 'share': void openShare(); break;
+      case 'share': void import('./ui/shareCard').then(m => m.openShare()); break; // loaded when first used
       case 'logMeas': openEntry(null, true); break;
       case 'newProfile': newProfile(); break;
       case 'toggleWeeks': toggleWeeks(); render(); break;

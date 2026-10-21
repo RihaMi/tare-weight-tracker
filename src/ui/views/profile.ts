@@ -4,7 +4,7 @@ import { isEnvelope, keyInfoFor, unseal, type Envelope } from '../../lib/crypto'
 import { migrate } from '../../data/schema';
 import { formatLocale } from '../../lib/format';
 import { autoBackupState, backUpNow, chooseBackupFolder, resumeAutoBackup, stopAutoBackup } from '../autoBackup';
-import { guessUnit, readImportFile, toEntries, type ImportPreview, type WeightUnit } from '../../data/importers';
+import type { ImportPreview, WeightUnit } from '../../data/importers';
 import { DataError, blankProfile, newId, type AppData, type Frame, type Profile } from '../../data/schema';
 import { t, tn, type Key } from '../../i18n';
 import { calc } from '../../lib/calc';
@@ -28,6 +28,8 @@ import { applyTheme } from '../theme';
 /** A backup picked to restore: its data, or an encrypted backup still waiting for its PIN. */
 let pendingRestore: { data: AppData; name: string } | { env: Envelope; name: string } | null = null;
 let pendingImport: { name: string; preview: ImportPreview; unit: WeightUnit } | null = null;
+// The file readers load on the first import, not with the app.
+let importers: typeof import('../../data/importers') | null = null;
 
 const counts = (d: AppData) => ({
   profiles: tn('backup.profiles', d.profiles.length),
@@ -190,7 +192,7 @@ function showImportConfirm(reading?: string): void {
   if (!pendingImport) { box.hidden = true; box.innerHTML = ''; return; }
   const { name, preview: pv, unit: fileUnit } = pendingImport;
   const u = unit(), p = profile();
-  const { entries, outOfRange } = toEntries(pv, fileUnit);
+  const { entries, outOfRange } = importers!.toEntries(pv, fileUnit);
   const kgs = entries.map(e => e.kg);
   const have = new Set(p.sample ? [] : p.entries.map(e => e.date));
   const replaces = entries.filter(e => have.has(e.date)).length;
@@ -384,8 +386,9 @@ export function bindProfile(): void {
     showImportConfirm(file.name);
     try {
       // US-style month/day is only assumed when a file's dates could be read either way.
-      const preview = await readImportFile(file, navigator.language === 'en-US');
-      pendingImport = { name: file.name, preview, unit: guessUnit(preview) };
+      importers ??= await import('../../data/importers');
+      const preview = await importers.readImportFile(file, navigator.language === 'en-US');
+      pendingImport = { name: file.name, preview, unit: importers.guessUnit(preview) };
       showImportConfirm();
       $('#importConfirm')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     } catch (e) { showFileProblem('#importConfirm', file.name, e); }

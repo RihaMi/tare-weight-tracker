@@ -70,19 +70,24 @@ export async function pickTextFile(accept: string): Promise<{ name: string; text
   return f ? { name: f.name, text: await f.text() } : null;
 }
 
+// One pending disarm per button. A button that's used again (the entry dialog's Delete, say)
+// must not be disarmed early by the timer from an earlier time it was armed.
+const disarmTimers = new WeakMap<HTMLButtonElement, number>();
+
 /** Two-step confirm on a button: first click arms it, second click runs. */
 export function armOrRun(btn: HTMLButtonElement, armedLabel: string, run: () => void): void {
+  clearTimeout(disarmTimers.get(btn));
   if (btn.dataset.armed !== '1') {
     btn.dataset.armed = '1';
     btn.dataset.label = btn.textContent ?? '';
     btn.classList.add('armed');
     btn.textContent = armedLabel;
-    setTimeout(() => {
+    disarmTimers.set(btn, window.setTimeout(() => {
       if (!btn.isConnected || btn.dataset.armed !== '1') return;
       btn.dataset.armed = '';
       btn.classList.remove('armed');
       btn.textContent = btn.dataset.label ?? '';
-    }, 5000);
+    }, 5000));
     return;
   }
   run();

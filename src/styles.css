@@ -403,8 +403,8 @@ main { padding-top: 20px; display: grid; gap: 16px; }
 .wbar.good { background: var(--good-fill); } .wbar.bad { background: var(--bad-fill); }
 @media (max-width: 460px) {
   .week-table .bar-col { display: none; }
-  .week-table { font-size: .84rem; }
-  .week-table th, .week-table td { padding-inline: 5px; }
+  .week-table { font-size: .8rem; }
+  .week-table th, .week-table td { padding-inline: 4px; }
   /* A number never breaks from its unit, so this only splits stones and pounds onto two lines. */
   .week-table td.num { white-space: normal; }
 }

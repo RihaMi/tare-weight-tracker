@@ -112,7 +112,7 @@ function statsCard(p: Profile, r: Stats): string {
     ['stats.left', r.hasGoal ? (r.reached ? t('stats.done') : fmtW(Math.abs(r.remaining!), u)) : '—', ''],
     ['stats.perDay', fmtDelta(r.perDay!, u, 2), toward(r.perDay!)],
     ['stats.perWeek', fmtDelta(wk, u), toward(wk)],
-    likely ? ['stats.etaRange', dateRange(likely.from, likely.to), ''] : ['stats.eta', r.reached ? t('stats.reached') : r.eta ? longDate(r.eta) : '—', ''],
+    likely ? ['stats.etaRange', dateRange(likely.from, likely.to), 'date'] : ['stats.eta', r.reached ? t('stats.reached') : r.eta ? longDate(r.eta) : '—', 'date'],
     ['stats.need', r.needPerDay != null ? fmtDelta(r.needPerDay * 7, u) : '—', ''],
     ['stats.count', tn('stats.countValue', r.days!, { n: r.E.length, d: r.days! }), ''],
     ['stats.daysLeft', r.daysLeft != null ? (r.daysLeft >= 0 ? String(r.daysLeft) : t('stats.passed')) : '—', ''],

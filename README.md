@@ -60,7 +60,7 @@ src/
   ui/          screens (views/), chart, entry dialog, small DOM helpers
   app.ts       app state shared by the screens
   main.ts      start-up, navigation, install and update prompts
-public/        icons (regenerate with `npm run icons`)
+public/        icons (regenerate with `npm run icons`) and the install dialog's screenshots (`npm run build`, then `npm run screenshots`)
 .github/       CI: type-check, tests and build on every push
 ```
 

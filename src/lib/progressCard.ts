@@ -27,23 +27,32 @@ export interface CardModel {
   recent: Milestone[];       // newest first, at most three; "x% of the way" left out, since the card shows the progress itself
 }
 
-/** Null until there are two weigh-ins: one point isn't progress. */
-export function cardModel(p: Profile, u: Unit, today: string): CardModel | null {
+/** A stretch of time the picture covers instead of the whole history, such as one year. */
+export interface CardPeriod { from: string; to: string }
+
+/**
+ * Null until there are two weigh-ins (in the period, if given): one point isn't progress.
+ * With a period, the chart, change, pace, streak and milestones cover only it; the goal
+ * and how far along it you are still come from the whole history.
+ */
+export function cardModel(p: Profile, u: Unit, today: string, period?: CardPeriod): CardModel | null {
   const r = calc(p);
-  if (r.E.length < 2) return null;
-  const first = r.E[0].date, last = r.E[r.E.length - 1].date;
+  const E = period ? r.E.filter(e => e.date >= period.from && e.date <= period.to) : r.E;
+  if (E.length < 2) return null;
+  const first = E[0].date, last = E[E.length - 1].date;
   const span = daysBetween(first, last) || 1;
   const at = (date: string) => daysBetween(first, date) / span;
+  const change = E[E.length - 1].kg - E[0].kg;
   const { achieved } = milestones({ entries: r.E, goalKg: p.goalKg, heightCm: p.heightCm, unit: u, steps: p.goalSteps });
   return {
-    from: first, to: last, days: r.days!,
-    changeKg: r.change!, perWeekKg: r.perDay! * 7,
-    count: r.E.length, longestStreak: streaks(r.E, today).longestDays,
+    from: first, to: last, days: Math.max(1, daysBetween(first, last)),
+    changeKg: change, perWeekKg: (change / span) * 7,
+    count: E.length, longestStreak: streaks(E, period ? last : today).longestDays,
     dir: r.dir, goalKg: r.hasGoal ? p.goalKg : null, progress: r.hasGoal ? Math.max(0, Math.min(1, r.progress!)) : null, reached: !!r.reached,
-    startKg: r.start!, curKg: r.cur!,
-    trend: trendSeries(r.E).map(e => ({ x: at(e.date), kg: e.kg })),
-    points: r.E.map(e => ({ x: at(e.date), kg: e.kg })),
-    recent: achieved.filter(x => x.kind !== 'progress').slice(-3).reverse(),
+    startKg: E[0].kg, curKg: E[E.length - 1].kg,
+    trend: trendSeries(E).map(e => ({ x: at(e.date), kg: e.kg })),
+    points: E.map(e => ({ x: at(e.date), kg: e.kg })),
+    recent: achieved.filter(x => x.kind !== 'progress' && x.date >= first && x.date <= last).slice(-3).reverse(),
   };
 }
 

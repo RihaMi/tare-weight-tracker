@@ -21,6 +21,7 @@ Inspired by the iOS app *Monitor Your Weight*, rebuilt with a cleaner, modern de
 - **Weekly averages, streaks and milestones** (every 5 kg / 10 lb / 1 st, a quarter of the way, reaching the goal, a better BMI category). Logging a weight that reaches one says so.
 - **Patterns:** plateaus, and the days of the week you tend to weigh more, each explained.
 - **Month recap:** in the first week of each month, a look back at the last one: trend change, average, days logged, best week, milestones and events.
+- **Year in review:** in the first two weeks of January, the year before: trend change, weigh-ins, best month, longest streak and milestones, with a picture of that year to share.
 
 **Plan ahead**
 - **Goal and steps:** a goal weight and date, with smaller steps on the way.

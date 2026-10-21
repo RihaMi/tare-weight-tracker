@@ -20,8 +20,9 @@ export const activityKey = (v: number, suffix: '' | '.d' | '.s' = ''): Key => `a
 
 function readingHTML(kg: number): string {
   const u = unit();
-  if (u === 'st') { const { st, lb } = splitStone(kg); return `${st}<small>st</small>${fmtNum(lb)}<small>lb</small>`; }
-  return `${fmtNum(disp(kg, u))}<small>${deltaUnit(u)}</small>`;
+  // Each number in a span of its own: the reading is a flex row, and a number's comma must stay inside it.
+  if (u === 'st') { const { st, lb } = splitStone(kg); return `<span>${st}</span><small>st</small><span>${fmtNum(lb)}</span><small>lb</small>`; }
+  return `<span>${fmtNum(disp(kg, u))}</span><small>${deltaUnit(u)}</small>`;
 }
 
 /** Where the trend sits in the maintenance range around the goal: the range in the middle third of the bar. */
@@ -175,5 +176,7 @@ export function overviewView(): string {
       <p class="muted measure">${t('overview.empty.text')}</p>
       <button class="btn primary" data-act="log">${t('overview.logFirst')}</button></section>`;
   }
-  return `<div class="grid-2"><div class="col">${hero(p, r)}${chartCard(r)}</div><div class="col">${thisWeekCard(p, r)}${statsCard(p, r)}${bmiCard(p, r)}${calorieCard(p, r)}</div></div>`;
+  // Calories sit under the chart on wide screens, so the two columns end at about the same height,
+  // and come last again once the columns stack.
+  return `<div class="grid-2"><div class="col">${hero(p, r)}${chartCard(r)}<div class="last-when-stacked">${calorieCard(p, r)}</div></div><div class="col">${thisWeekCard(p, r)}${statsCard(p, r)}${bmiCard(p, r)}</div></div>`;
 }

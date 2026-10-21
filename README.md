@@ -22,6 +22,7 @@ It was inspired by the iOS app *Monitor Your Weight* and rebuilt with a cleaner,
 - **Events.** Mark medication, a holiday, an illness, exercise or a diet change. Each shows on the chart as a band, and History compares the trend before and since.
 - **Share your progress.** A picture of your change, trend, pace and latest milestone to save or send. It leaves weights off unless you turn them on, and it is made on your device.
 - **Patterns.** Spots plateaus (the trend flat for two weeks or more) and which days of the week you tend to weigh more, and explains both.
+- **Typo check.** A weight far from your trend (say 94.1 instead of 84.1) is questioned once before it is saved: correct it, or choose **Save anyway**. A normal day-to-day swing is never questioned.
 - **Quick log.** If you haven't weighed in today, the log form opens by itself when you open Tare (once a day; can be turned off). On an installed app, long-press the icon and choose **Log weight**.
 - **Safe with several windows.** Tabs and the installed app stay in sync, so one window can't undo changes made in another.
 - **Backup reminder.** A reminder two weeks after you start logging, and again whenever your last backup is 30 days old.

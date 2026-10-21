@@ -1,6 +1,7 @@
 import { app, commit, profile, unit } from '../app';
 import { MEASURES, cleanComposition, newId, type Entry, type Measures } from '../data/schema';
 import { calc, sortedEntries } from '../lib/calc';
+import { unlikelyWeight } from '../lib/plausible';
 import { newMilestones } from '../lib/insights';
 import { milestoneLabel, milestonesFor } from './views/insights';
 import { todayISO } from '../lib/dates';
@@ -14,6 +15,8 @@ import { commitWithUndo } from './undo';
 // The "Log weight" dialog, also used to edit or delete a weigh-in.
 
 let editing: string | null = null;
+/** A weight far from the trend that was asked about once; saving it again keeps it. */
+let askedKg: number | null = null;
 const dlg = () => $<HTMLDialogElement>('#entryDlg');
 
 function weightInputs(kg: number | null): void {
@@ -26,6 +29,13 @@ function weightInputs(kg: number | null): void {
   } else {
     w.innerHTML = `<div class="big-in"><label class="f">${t('common.weightUnit', { unit: u })}<input id="eW" type="number" inputmode="decimal" step="0.1" min="20" max="${u === 'kg' ? 400 : 900}" value="${kg != null ? disp(kg, u).toFixed(1) : ''}" required></label></div>`;
   }
+}
+
+/** Clears the "is this a typo?" question, once the weight changes or the form opens again. */
+function clearCheck(): void {
+  askedKg = null;
+  $('#eCheck').hidden = true;
+  $('#eSave').textContent = t('common.save');
 }
 
 function checkExists(): void {
@@ -64,6 +74,7 @@ export function openEntry(date?: string | null, focusMeasures = false, linked?: 
   const del = $<HTMLButtonElement>('#eDelete');
   del.hidden = !ex; del.dataset.armed = ''; del.classList.remove('armed'); del.textContent = t('entry.delete');
   checkExists();
+  clearCheck();
   dlg().showModal();
   setTimeout(() => {
     if (linked) { $<HTMLButtonElement>('#entryForm button[type=submit]').focus(); return; }
@@ -86,6 +97,18 @@ function submit(ev: SubmitEvent): void {
     return;
   }
   err.hidden = true;
+  const unlikely = unlikelyWeight(profile().entries.filter(x => x.date !== editing), date, kg);
+  if (unlikely && askedKg !== kg) {
+    askedKg = kg;
+    const check = $('#eCheck');
+    check.hidden = false;
+    check.innerHTML = t(unlikely.diffKg > 0 ? 'entry.unlikely.up' : 'entry.unlikely.down', {
+      w: fmtW(kg, u), diff: fmtW(Math.abs(unlikely.diffKg), u === 'st' ? 'lb' : u), trend: fmtW(unlikely.trendKg, u),
+    });
+    $('#eSave').textContent = t('entry.saveAnyway');
+    ($<HTMLInputElement>('#eW') ?? $<HTMLInputElement>('#eSt'))?.select();
+    return;
+  }
   const measures: Measures = {};
   for (const [k] of MEASURES) {
     const v = parseFloat($<HTMLInputElement>('#m_' + k).value);
@@ -126,6 +149,7 @@ export function initEntryDialog(): void {
     const p = profile();
     $<HTMLInputElement>('#ePeriod').checked = p.cycleTracking && p.periodStarts.includes($<HTMLInputElement>('#eDate').value);
   });
+  $('#eWeightWrap').addEventListener('input', () => { if (askedKg != null) clearCheck(); });
   $('#entryClose').addEventListener('click', () => dlg().close());
   $('#entryCancel').addEventListener('click', () => dlg().close());
   $('#entryForm').addEventListener('submit', submit as EventListener);

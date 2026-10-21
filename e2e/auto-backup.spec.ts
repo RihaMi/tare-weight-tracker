@@ -51,7 +51,7 @@ test('backs up to the chosen folder, again after a change, keeping the last 7 da
 
   // A change is backed up a few seconds later.
   await page.locator('#logBtn').click();
-  await page.locator('#eW').fill('88.8');
+  await page.locator('#eW').fill('86.6');
   await page.locator('#eNote').fill('after the backup');
   await page.locator('#entryForm button[type=submit]').click();
   await expect.poll(async () => (await files(page))[today], { timeout: 15_000 }).toContain('after the backup');

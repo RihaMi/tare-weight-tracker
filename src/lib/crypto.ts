@@ -1,13 +1,19 @@
 // Encryption of saved data with a key derived from the PIN.
 //
-// - Key: PBKDF2-SHA-256 (150 000 rounds, random salt) from the PIN, used for
-//   AES-256-GCM. The key is never exported or stored.
+// - Key: PBKDF2-SHA-256 (600 000 rounds, the OWASP recommendation; random salt) from
+//   the PIN, used for AES-256-GCM. The key is never exported or stored. Data saved with
+//   fewer rounds (150 000 before) still opens, and is saved again with a new key after unlocking.
+// - A 4–6 digit PIN keeps out someone who picks up the device. Against someone with a copy
+//   of the encrypted data and time to try every PIN, no number of rounds is enough.
 // - Each save uses a fresh random IV. GCM also authenticates the data, so a
 //   wrong PIN (or tampered data) fails to decrypt instead of giving garbage:
 //   decrypting is how the PIN is checked.
 // - Only the salt, round count, IV, PIN length and ciphertext are stored.
 
-export const KEY_ITERATIONS = 150_000;
+export const KEY_ITERATIONS = 600_000;
+
+/** Whether data saved with this key should be saved again with a stronger one. */
+export const isWeakKey = (k: KeyInfo): boolean => k.iterations < KEY_ITERATIONS;
 
 /** What's stored instead of the plain data when a PIN is set. */
 export interface Envelope {

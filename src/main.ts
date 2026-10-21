@@ -19,7 +19,7 @@ import { overviewView, rememberChartTable, replanLater } from './ui/views/overvi
 import { bindProfile, downloadBackup, profileView, resetImport } from './ui/views/profile';
 import { backupNudge } from './lib/backupNudge';
 import { announceSaved, initTabSync } from './ui/sync';
-import { keyInfoFor, newKeyInfo, seal, unseal, type Envelope } from './lib/crypto';
+import { isWeakKey, keyInfoFor, newKeyInfo, seal, unseal, type Envelope } from './lib/crypto';
 import { verifyPin } from './lib/pin';
 import { initPasskeySupport } from './lib/passkey';
 import { askToKeep } from './ui/keepData';
@@ -164,6 +164,8 @@ async function unlockEncrypted(pin: string, fallback: Envelope): Promise<boolean
     const key = await keyInfoFor(pin, env);
     app.data = migrate(await unseal(env, key));
     app.key = key;
+    // Saved with fewer rounds than now: derive a stronger key in the background and save again.
+    if (isWeakKey(key)) void newKeyInfo(pin).then(strong => { app.key = strong; void app.persist(app.data); });
   } catch {
     return false;
   }
@@ -284,7 +286,7 @@ function bindGlobalEvents(): void {
         break;
       }
       case 'replanLater': replanLater(profile()); render(); break;
-      case 'backupNow': downloadBackup(); break;
+      case 'backupNow': void downloadBackup(); break;
       case 'resumeAutoBackup': void resumeAutoBackup().then(ok => toast(t(ok ? 'autobackup.resumed' : 'autobackup.notAllowed'))); break;
       case 'retrySave': void app.persist(app.data); break;
       case 'backupLater':

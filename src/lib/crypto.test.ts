@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryStore, createSaver, loadData } from '../data/storage';
 import { defaultSettings, type AppData } from '../data/schema';
-import { isEnvelope, keyInfoFor, newKeyInfo, seal, unseal } from './crypto';
+import { KEY_ITERATIONS, isEnvelope, isWeakKey, keyInfoFor, newKeyInfo, seal, unseal } from './crypto';
 
-const ROUNDS = 1000; // fast for tests; the app uses 150 000
+const ROUNDS = 1000; // fast for tests; the app uses 600 000
 
 const data = (): AppData => ({
   version: 8, unit: 'kg', activeId: 'p',
@@ -13,6 +13,17 @@ const data = (): AppData => ({
 });
 
 describe('encryption', () => {
+  it('opens data saved with fewer rounds, and flags its key for a stronger one', async () => {
+    const old = await seal(data(), await newKeyInfo('2580', 150_000));
+    const k = await keyInfoFor('2580', old);
+    expect(await unseal(old, k)).toEqual(data());
+    expect(isWeakKey(k)).toBe(true);
+    const strong = await newKeyInfo('2580');
+    expect(strong.iterations).toBe(KEY_ITERATIONS);
+    expect(KEY_ITERATIONS).toBeGreaterThanOrEqual(600_000);
+    expect(isWeakKey(strong)).toBe(false);
+  });
+
   it('round-trips data with the right PIN', async () => {
     const k = await newKeyInfo('2580', ROUNDS);
     const env = await seal(data(), k);

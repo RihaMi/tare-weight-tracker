@@ -21,32 +21,35 @@ export function splitStone(kg: number): { st: number; lb: number } {
   return { st, lb };
 }
 
+/** Between a number and its unit, so a line never breaks between them ("0.3 / kg"). */
+const NB = '\u00a0';
+
 export function fmtW(kg: number | null | undefined, u: Unit, withUnit = true): string {
   if (kg == null || isNaN(kg)) return '—';
-  if (u === 'kg') return fmtNum(kg) + (withUnit ? ' kg' : '');
-  if (u === 'lb') return fmtNum(kg / LB) + (withUnit ? ' lb' : '');
+  if (u === 'kg') return fmtNum(kg) + (withUnit ? NB + 'kg' : '');
+  if (u === 'lb') return fmtNum(kg / LB) + (withUnit ? NB + 'lb' : '');
   const { st, lb } = splitStone(kg);
-  return `${st} st ${fmtNum(lb)} lb`;
+  return `${st}${NB}st ${fmtNum(lb)}${NB}lb`;
 }
 
 export function fmtDelta(kg: number, u: Unit, digits = 1): string {
   const v = disp(kg, u);
   const z = 0.5 * Math.pow(10, -digits);
   const sign = v >= z ? '+' : v <= -z ? '−' : '±';
-  return sign + fmtNum(Math.abs(v), digits) + ' ' + deltaUnit(u);
+  return sign + fmtNum(Math.abs(v), digits) + NB + deltaUnit(u);
 }
 
 /** A weekly pace such as 0.25 kg or 0.55 lb: up to two decimals, no trailing zeros. */
 export function fmtPace(kg: number, u: Unit, signed = false): string {
   const v = disp(Math.abs(kg), u);
   const sign = !signed || Math.abs(kg) < 1e-9 ? '' : kg < 0 ? '−' : '+';
-  return sign + fmtNumMax(v, 2) + ' ' + deltaUnit(u);
+  return sign + fmtNumMax(v, 2) + NB + deltaUnit(u);
 }
 
 export const fmtLen = (cm: number | null | undefined, u: Unit): string =>
-  cm == null ? '—' : isMetric(u) ? fmtNum(cm) + ' cm' : fmtNum(cm / CM_IN) + ' in';
+  cm == null ? '—' : isMetric(u) ? fmtNum(cm) + NB + 'cm' : fmtNum(cm / CM_IN) + NB + 'in';
 
 export function lenDelta(cm: number, u: Unit): string {
   const v = isMetric(u) ? cm : cm / CM_IN;
-  return (v >= 0.05 ? '+' : v <= -0.05 ? '−' : '±') + fmtNum(Math.abs(v)) + (isMetric(u) ? ' cm' : ' in');
+  return (v >= 0.05 ? '+' : v <= -0.05 ? '−' : '±') + fmtNum(Math.abs(v)) + NB + (isMetric(u) ? 'cm' : 'in');
 }

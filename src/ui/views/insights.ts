@@ -8,9 +8,9 @@ import { LB, fmtDelta, fmtW } from '../../lib/units';
 
 /** A milestone amount in the unit people think in: 5 kg, 10 lb, 1 st. */
 export function fmtStep(kg: number, u: Unit): string {
-  if (u === 'kg') return `${Math.round(kg)} kg`;
-  if (u === 'lb') return `${Math.round(kg / LB)} lb`;
-  return `${Math.round(kg / LB / 14)} st`;
+  if (u === 'kg') return `${Math.round(kg)}\u00a0kg`;
+  if (u === 'lb') return `${Math.round(kg / LB)}\u00a0lb`;
+  return `${Math.round(kg / LB / 14)}\u00a0st`;
 }
 
 const amountLabel = (amountKg: number, dir: number, u: Unit) => t(dir < 0 ? 'ms.lost' : 'ms.gained', { amount: fmtStep(amountKg, u) });
@@ -125,16 +125,19 @@ export function weeklyCard(r: Stats, showAll: boolean): string {
   }
   const list = showAll ? weeks : weeks.slice(0, WEEKS_SHOWN);
   const max = Math.max(...weeks.map(w => Math.abs(w.change ?? 0)), 0.1);
+  // The year only where it isn't this one, which keeps the table within a phone's width.
+  const thisYear = todayISO().slice(0, 4);
+  const weekOf = (d: string) => fmtDate(d, d.startsWith(thisYear) ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' });
   return `<section class="card"><div class="card-head"><h2>${t('weekly.title')}</h2><span class="muted small">${t('weekly.sub')}</span></div>
     <div class="table-wrap"><table class="week-table">
-      <thead><tr><th>${t('weekly.week')}</th><th class="num">${t('weekly.avg')}</th><th class="num">${t('weekly.change')}</th><th class="bar-col" aria-hidden="true"></th><th class="num">${t('weekly.count')}</th></tr></thead>
+      <thead><tr><th>${t('weekly.week')}</th><th class="num">${t('weekly.avg')}</th><th class="num">${t('weekly.change')}</th><th class="bar-col" aria-hidden="true"></th><th class="num count-col">${t('weekly.count')}</th></tr></thead>
       <tbody>${list.map(w => {
         const c = w.change, cls = c == null ? '' : r.dir * c > 0.05 ? 'good' : r.dir * c < -0.05 ? 'bad' : '';
         const width = c == null ? 0 : (Math.abs(c) / max) * 100;
-        return `<tr><td>${fmtDate(w.week, { day: 'numeric', month: 'short', year: 'numeric' })}</td><td class="num">${fmtW(w.avg, u)}</td>
+        return `<tr><td>${weekOf(w.week)}</td><td class="num">${fmtW(w.avg, u)}</td>
           <td class="num ${cls}">${c == null ? '—' : fmtDelta(c, u)}</td>
           <td class="bar-col" aria-hidden="true"><span class="wbar ${cls}" style="width:${width.toFixed(1)}%"></span></td>
-          <td class="num">${w.n}</td></tr>`;
+          <td class="num count-col">${w.n}</td></tr>`;
       }).join('')}</tbody></table></div>
     ${weeks.length > WEEKS_SHOWN ? `<div class="actions start"><button type="button" class="btn ghost small-btn" data-act="toggleWeeks">${showAll ? t('weekly.fewer') : t('weekly.all', { n: weeks.length })}</button></div>` : ''}
   </section>`;

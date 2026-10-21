@@ -44,8 +44,8 @@ describe('translation', () => {
 
   it('formats numbers and dates for the language', () => {
     setLang('cs');
-    expect(fmtW(84.1, 'kg')).toBe('84,1 kg');
-    expect(fmtDelta(-1.25, 'kg', 2)).toBe('−1,25 kg');
+    expect(fmtW(84.1, 'kg')).toBe('84,1\u00a0kg');
+    expect(fmtDelta(-1.25, 'kg', 2)).toBe('−1,25\u00a0kg');
     expect(fmtInt(1840)).toMatch(/^1\s840$/);
     expect(fmtDate('2026-10-19', { month: 'long', year: 'numeric' })).toBe('říjen 2026');
   });

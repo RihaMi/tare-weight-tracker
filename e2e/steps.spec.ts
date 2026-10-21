@@ -6,7 +6,7 @@ test('the example shows its steps on the ruler, the next one, and a step milesto
   await page.goto('/');
   await expect(page.locator('.hero .ruler-step')).toHaveCount(2);
   await expect(page.locator('.hero .ruler-step.done')).toHaveCount(1);
-  await expect(page.locator('.hero .step-line')).toContainText(/Next step: 82\.0 kg, \d\.\d kg to go · by \w+ \d+, \d\.\d kg a week/);
+  await expect(page.locator('.hero .step-line')).toContainText(/Next step: 82\.0\skg, \d\.\d\skg to go · by \w+ \d+, \d\.\d\skg a week/);
   await page.goto('/#history');
   await expect(page.locator('.ms-list').first()).toContainText('Step reached: 85.0 kg');
 });

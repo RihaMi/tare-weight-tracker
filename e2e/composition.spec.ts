@@ -7,7 +7,7 @@ test('the example shows body composition on Body and measured body fat on the BM
   await page.goto('/#body');
   const card = page.locator('#compositionCard');
   await expect(card.locator('.mcard .eyebrow')).toHaveText(['Body fat', 'Muscle', 'Body water']);
-  await expect(card).toContainText(/Of the \d+\.\d kg lost since \w+ \d+, about \d+\.\d kg was fat/);
+  await expect(card).toContainText(/Of the \d+\.\d\skg lost since \w+ \d+, about \d+\.\d\skg was fat/);
   await page.goto('/#overview');
   await expect(page.locator('.kv dt', { hasText: 'Body fat, from your scale' })).toHaveCount(1);
 });

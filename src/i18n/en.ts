@@ -455,6 +455,8 @@ export const en = {
   'profile.suggestNote': 'Based on the Devine formula for your height and frame, kept inside a healthy BMI. At a steady 0.5 kg (1.1 lb) a week that takes about {weeks} weeks, until {date}. Press Save profile to keep it.',
   'store.indexeddb': 'Saved on this device, in this browser.',
   'store.localstorage': 'Saved on this device, in this browser (basic storage).',
+  'store.kept': "The browser won't clear your data to free up space.",
+  'store.notKept': 'The browser may clear your data if the device runs low on space.',
   'store.memory': "This browser isn't letting Tare save anything, so entries will be lost when you close the page. Download a backup before leaving.",
   'backup.title': 'Backup & data',
   'backup.intro': 'Nothing is sent to a server. Download a backup now and then, and before clearing your browser data or switching devices.',

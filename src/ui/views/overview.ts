@@ -3,13 +3,14 @@ import type { Profile } from '../../data/schema';
 import { t, tn, type Key } from '../../i18n';
 import { BMI_CATS, bmiCategory, calc, paceState, type Stats } from '../../lib/calc';
 import { roundKcal } from '../../lib/calories';
-import { fmtDate, todayISO } from '../../lib/dates';
+import { addDays, fmtDate, todayISO } from '../../lib/dates';
 import { goalDateRange } from '../../lib/forecast';
 import { compositionSummary } from '../../lib/composition';
 import { orderedSteps } from '../../lib/insights';
+import { replan } from '../../lib/replan';
 import { nextStep, stepsReached } from '../../lib/steps';
 import { fmtInt, fmtNum } from '../../lib/format';
-import { deltaUnit, disp, fmtDelta, fmtW, splitStone } from '../../lib/units';
+import { deltaUnit, disp, fmtDelta, fmtPace, fmtW, splitStone } from '../../lib/units';
 import { esc } from '../dom';
 import { thisWeekCard } from './insights';
 
@@ -75,9 +76,31 @@ function hero(p: Profile, r: Stats): string {
     ${r.maintenance ? maintainBar(p, r) : r.hasGoal ? `<div class="ruler" aria-label="${esc(t('overview.progressAria', { pct }))}">
       <div class="ruler-track"><div class="ruler-ticks"></div><div class="ruler-bar"></div><div class="ruler-fill" style="width:${pct}%"></div>${stepTicks(p, r)}<div class="ruler-mark" style="left:${pct}%"></div></div>
       <div class="ruler-labels"><span>${t('overview.start')} <b>${fmtW(r.start, u)}</b></span><span>${t('overview.there', { pct })}</span><span>${t('common.goal')} <b>${fmtW(p.goalKg, u)}</b></span></div>
-    </div>${stepLine(p, r)}` : `<p class="note">${t('overview.setGoal', { link: profileLink() })}</p>`}
+    </div>${stepLine(p, r)}${replanBox(p, r)}` : `<p class="note">${t('overview.setGoal', { link: profileLink() })}</p>`}
     ${r.E.length > 1 ? `<div class="actions start hero-share"><button type="button" class="btn small-btn" data-act="share">${t('share.button')}</button></div>` : ''}
   </section>`;
+}
+
+// "Not now" on the re-plan hides it for two weeks, for that profile on this device.
+const REPLAN_LATER_KEY = 'tare.replanLater';
+function replanHiddenUntil(): Record<string, string> {
+  try { const v = JSON.parse(localStorage.getItem(REPLAN_LATER_KEY) ?? '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; }
+}
+export function replanLater(p: Profile): void {
+  try { localStorage.setItem(REPLAN_LATER_KEY, JSON.stringify({ ...replanHiddenUntil(), [p.id]: addDays(todayISO(), 14) })); } catch { /* shows again next time */ }
+}
+
+/** Behind the goal date: the pace keeping it now takes, and a realistic date to move it to. */
+function replanBox(p: Profile, r: Stats): string {
+  if ((replanHiddenUntil()[p.id] ?? '') > todayISO()) return '';
+  const rp = replan(p.goalKg ?? undefined, p.goalDate ?? undefined, r, todayISO());
+  if (!rp) return '';
+  const u = unit(), long = (d: string) => fmtDate(d, { day: 'numeric', month: 'short', year: 'numeric' });
+  const keep = rp.needPerWeekKg == null ? t('replan.passed')
+    : t(r.dir < 0 ? 'replan.keepLose' : 'replan.keepGain', { w: fmtPace(rp.needPerWeekKg, u) }) + (rp.tooFast ? ' ' + t('replan.tooFast') : '');
+  const move = t(rp.basis === 'recent' ? 'replan.atRecent' : 'replan.atSteady', { w: fmtPace(rp.perWeekKg, u), date: long(rp.newDate) });
+  return `<div class="replan"><h3>${t('replan.title', { date: long(p.goalDate!) })}</h3><p>${keep}</p><p>${move}</p>
+    <div class="actions start"><button type="button" class="btn small-btn" data-act="replan" data-date="${rp.newDate}">${t('replan.move', { date: long(rp.newDate) })}</button><button type="button" class="btn ghost small-btn" data-act="replanLater">${t('replan.later')}</button></div></div>`;
 }
 
 /** Whether "Show as table" is open, kept while the Overview redraws. */

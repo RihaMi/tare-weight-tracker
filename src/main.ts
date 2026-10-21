@@ -15,7 +15,7 @@ import { openEvent } from './ui/eventDialog';
 import { bodyView } from './ui/views/body';
 import { bindCalories, caloriesView, resetCalories } from './ui/views/calories';
 import { historyView, toggleWeeks } from './ui/views/history';
-import { overviewView, rememberChartTable } from './ui/views/overview';
+import { overviewView, rememberChartTable, replanLater } from './ui/views/overview';
 import { bindProfile, downloadBackup, profileView, resetImport } from './ui/views/profile';
 import { backupNudge } from './lib/backupNudge';
 import { announceSaved, initTabSync } from './ui/sync';
@@ -31,7 +31,7 @@ import { applyTheme } from './ui/theme';
 import { commitWithUndo, initUndoShortcut } from './ui/undo';
 import { initFigures } from './ui/figures';
 import { isPastTime } from './lib/ics';
-import { todayISO } from './lib/dates';
+import { fmtDate, todayISO } from './lib/dates';
 import { parseLogLink } from './lib/logLink';
 import { resolveLang, setLang, t, tn, translateStatic, type Key } from './i18n';
 import type { SampleText } from './data/sample';
@@ -272,6 +272,18 @@ function bindGlobalEvents(): void {
       case 'logMeas': openEntry(null, true); break;
       case 'newProfile': newProfile(); break;
       case 'toggleWeeks': toggleWeeks(); render(); break;
+      case 'replan': {
+        const p = profile(), before = p.goalDate, date = a.dataset.date!;
+        p.goalDate = date; p.updatedAt = Date.now();
+        commitWithUndo(t('replan.moved', { date: fmtDate(date, { day: 'numeric', month: 'short', year: 'numeric' }) }), () => {
+          const owner = app.data.profiles.find(x => x.id === p.id);
+          if (!owner || owner.goalDate !== date) return false;
+          owner.goalDate = before; owner.updatedAt = Date.now();
+          return true;
+        });
+        break;
+      }
+      case 'replanLater': replanLater(profile()); render(); break;
       case 'backupNow': downloadBackup(); break;
       case 'resumeAutoBackup': void resumeAutoBackup().then(ok => toast(t(ok ? 'autobackup.resumed' : 'autobackup.notAllowed'))); break;
       case 'retrySave': void app.persist(app.data); break;

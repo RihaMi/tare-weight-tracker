@@ -7,6 +7,7 @@ It was inspired by the iOS app *Monitor Your Weight* and rebuilt with a cleaner,
 ## Features
 
 - **Overview.** A big scale-style reading of your current weight, a ruler from start weight to goal, an "On pace / Behind pace" badge and a trend chart (1M to All).
+- **Re-plan when behind.** When you have fallen behind pace (judged on at least three weeks of weigh-ins), Overview shows what keeping the goal date now takes (and whether that is healthy), and offers a realistic new date from your recent pace. One tap moves it, with Undo; **Not now** hides it for two weeks.
 - **Statistics.** Total change, amount left, average change per day and per week, projected goal date and the weekly rate you need.
 - **Calorie calculator:**
   - Resting metabolism, maintenance calories and a daily target for your chosen pace

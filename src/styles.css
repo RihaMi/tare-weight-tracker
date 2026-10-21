@@ -207,6 +207,11 @@ main { padding-top: 20px; display: grid; gap: 16px; }
 .ruler-step { position: absolute; top: 15px; width: 10px; height: 12px; transform: translateX(-5px); border-radius: 3px; background: var(--surface); border: 2px solid var(--accent); }
 .ruler-step.done { background: var(--accent); }
 .step-line { margin-top: 10px; }
+/* Behind the goal date: the two ways on, under the ruler. */
+.replan { margin-top: 14px; background: var(--warn-soft); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; }
+.replan h3 { font-size: .95rem; }
+.replan p { margin: 0; font-size: .9rem; }
+.replan .actions { margin-top: 4px; }
 .steps-edit { margin-top: 18px; display: grid; gap: 10px; }
 /* Each step a tile of its own, so its weight and date read as one step. */
 .step-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; align-items: end; background: var(--surface-2); border-radius: 12px; padding: 10px 12px 12px; }

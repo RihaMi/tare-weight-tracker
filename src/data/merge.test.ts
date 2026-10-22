@@ -95,4 +95,11 @@ describe('merging a backup', () => {
       expect(counts.removed).toBe(0);
     });
   });
+
+  it('adds past goals from the backup by id, keeping the ones here', () => {
+    const g = (id: string, to: string) => ({ id, from: '2026-01-01', to, startKg: 90, goalKg: 85, endKg: 86, reached: null });
+    const here = freshData([prof('a', [], { pastGoals: [g('g1', '2026-03-01')] })]);
+    const there = freshData([prof('a', [], { pastGoals: [g('g1', '2026-03-01'), g('g0', '2026-02-01')] })]);
+    expect(mergeBackup(here, there).data.profiles[0].pastGoals.map(x => x.id)).toEqual(['g0', 'g1']);
+  });
 });

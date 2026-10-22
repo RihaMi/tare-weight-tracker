@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { encryptedSaved, expect, test } from './fixtures';
 
 // Logging a weight from a link (?log=84.2), as iOS Shortcuts or an NFC tag would open it.
 
@@ -37,7 +37,7 @@ test('with a PIN set, asks for it first, then fills in the form', async ({ page 
   await page.locator('#pinNew').fill('2580');
   await page.locator('#pinRepeat').fill('2580');
   await page.locator('#pinForm button[type=submit]').click();
-  await expect(page.locator('[data-pin=remove]')).toBeVisible();
+  await encryptedSaved(page);
   await page.goto('/?log=86.6');
   await expect(page.locator('#lock')).toBeVisible();
   await expect(page.locator('#entryDlg')).toBeHidden();

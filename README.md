@@ -133,7 +133,7 @@ Every browser test starts on the same day, 20 October 2026 at 09:00 (`e2e/fixtur
 
 **Screenshot tests** (`e2e/screens.spec.ts`) compare each screen with a reference image, at desktop and phone size and in dark mode, with the clock fixed to one day so the example data looks the same every run. Fonts render differently on each operating system, so the references are made on Linux and compared only there; on Windows and macOS these tests are skipped.
 
-- **If a change is meant to look different**, update the references: put `[update screenshots]` in a commit message, or run **Update screenshots** from the Actions tab on your branch. The workflow commits the new images to the branch and then starts the checks on that commit itself.
+- **If a change is meant to look different**, update the references: put `[update screenshots]` in a commit message, or run **Update screenshots** from the Actions tab on your branch. The workflow commits the new images to the branch and gets the checks running on that commit: it approves the ones GitHub holds for a bot's commit, or starts them itself on a branch without a pull request.
 - **When they fail**, the report saved with the run shows the expected image, the actual one, and the difference.
 
 ### Adding a language

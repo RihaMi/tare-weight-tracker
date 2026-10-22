@@ -355,6 +355,8 @@ export const en = {
 
   'history.empty': 'No history yet',
   'history.title': 'All weigh-ins',
+  'history.searchNotes': 'Search notes',
+  'history.noNotes': 'No weigh-ins with “{q}” in the note.',
   'history.good': 'On pace or better',
   'history.warn': 'Slower than planned',
   'history.bad': 'Moved away from goal',

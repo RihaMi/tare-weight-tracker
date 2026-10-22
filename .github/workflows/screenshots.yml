@@ -3,6 +3,8 @@ name: Update screenshots
 # Makes the reference screenshots for e2e/screens.spec.ts on Linux, the same
 # system the browser tests run on, and commits them to the branch.
 # Run it from the Actions tab, or put "[update screenshots]" in a commit message.
+# A commit made with the workflow's own token doesn't start other workflows, so it
+# starts the checks on its commit itself, and the pull request gets them.
 
 on:
   workflow_dispatch:
@@ -11,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  actions: write   # to start the checks on the new commit
 
 jobs:
   update:
@@ -35,3 +38,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Update screenshots"
           git push
+          gh workflow run ci.yml --ref "$GITHUB_REF_NAME"
+          gh workflow run browser.yml --ref "$GITHUB_REF_NAME"
+        env:
+          GH_TOKEN: ${{ github.token }}

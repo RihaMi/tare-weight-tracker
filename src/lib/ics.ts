@@ -1,4 +1,4 @@
-// A calendar file with a daily weigh-in reminder. Web apps can't reliably
+// A calendar file with a daily (or weekly) weigh-in reminder. Web apps can't reliably
 // schedule notifications by themselves, but every phone calendar can.
 
 const pad = (n: number): string => String(n).padStart(2, '0');
@@ -12,11 +12,15 @@ export interface ReminderEvent {
   title: string;
   description: string;
   uid: string;
+  /** Repeat weekly on this day (0 = Monday … 6 = Sunday) instead of daily; startDate should be that day. */
+  weekday?: number;
   now?: Date;
 }
 
-/** One daily repeating event with an alert at the start time. Lines end in CRLF as the format requires. */
-export function dailyReminderICS({ startDate, time, title, description, uid, now = new Date() }: ReminderEvent): string {
+const BYDAY = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+
+/** One repeating event (daily, or weekly on a day) with an alert at the start time. Lines end in CRLF as the format requires. */
+export function dailyReminderICS({ startDate, time, title, description, uid, weekday, now = new Date() }: ReminderEvent): string {
   const [h, m] = time.split(':').map(Number);
   const start = startDate.replace(/-/g, '') + `T${pad(h)}${pad(m)}00`; // floating local time
   const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
@@ -30,7 +34,7 @@ export function dailyReminderICS({ startDate, time, title, description, uid, now
     `DTSTAMP:${stamp}`,
     `DTSTART:${start}`,
     'DURATION:PT5M',
-    'RRULE:FREQ=DAILY',
+    weekday == null ? 'RRULE:FREQ=DAILY' : `RRULE:FREQ=WEEKLY;BYDAY=${BYDAY[weekday]}`,
     `SUMMARY:${icsText(title)}`,
     `DESCRIPTION:${icsText(description)}`,
     'BEGIN:VALARM',

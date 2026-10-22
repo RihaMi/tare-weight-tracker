@@ -45,6 +45,13 @@ describe('calendar reminder', () => {
     expect(ics).toContain('DTSTAMP:20261019T123456Z\r\n');
   });
 
+  it('repeats weekly on the chosen day when weighing in weekly', () => {
+    const weekly = dailyReminderICS({ startDate: '2026-10-25', time: '08:00', title: 'Weigh in', description: '', uid: 'w@tare', weekday: 6 });
+    expect(weekly).toContain('DTSTART:20261025T080000\r\n');
+    expect(weekly).toContain('RRULE:FREQ=WEEKLY;BYDAY=SU\r\n');
+    expect(weekly).not.toContain('FREQ=DAILY');
+  });
+
   it('escapes text and uses CRLF line endings', () => {
     expect(ics).toContain('SUMMARY:Weigh in\\; Tare\r\n');
     expect(ics).toContain('DESCRIPTION:Step on the scale\\,\\nthen log it.\r\n');

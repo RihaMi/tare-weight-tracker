@@ -38,7 +38,8 @@ Inspired by the iOS app *Monitor Your Weight*, rebuilt with a cleaner, modern de
 **Logging made easy**
 - **Quick log:** the log form opens by itself if you haven't weighed in today (once a day; can be turned off). On an installed app, long-press the icon and choose **Log weight**. On a keyboard, press **N**.
 - **Typo check:** a weight far from your trend (94.1 instead of 84.1) is questioned once before it's saved. A normal day-to-day swing never is.
-- **Reminders:** a daily reminder in the app if you haven't weighed in by your chosen time, a calendar file (.ics) with a daily alert, and an app icon badge.
+- **Daily or weekly:** weigh in every day, or once a week on a day you choose; reminders, quick log and the badge then only ask on that day.
+- **Reminders:** a reminder in the app if you haven't weighed in by your chosen time, a calendar file (.ics) with a daily or weekly alert, and an app icon badge.
 - **[Logging from a link](#logging-a-weight-from-a-link)** for Siri Shortcuts, NFC tags and automation apps.
 
 **Your data, kept safe**

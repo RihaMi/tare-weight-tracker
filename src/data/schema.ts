@@ -112,13 +112,14 @@ export interface Settings {
   reminder: { enabled: boolean; time: string };     // "HH:MM", local time
   badge: BadgeMode;                                 // what the installed app's icon shows
   quickLog: boolean;                                // open the log dialog when today has no weigh-in yet
+  rhythm: { weekly: boolean; day: number };         // weigh in every day, or weekly on day (0 = Monday … 6 = Sunday)
   lastBackupAt: number | null;                      // ms since epoch of the last full backup download
   backupSnoozeUntil: number | null;                 // "Later" on the backup reminder hides it until then
 }
 
 export const defaultSettings = (): Settings => ({
   lang: 'auto', theme: 'auto', pin: null, autoLockMinutes: 1, reminder: { enabled: false, time: '07:30' }, badge: 'off',
-  quickLog: true, lastBackupAt: null, backupSnoozeUntil: null,
+  quickLog: true, rhythm: { weekly: false, day: 0 }, lastBackupAt: null, backupSnoozeUntil: null,
 });
 
 export interface AppData {
@@ -277,6 +278,7 @@ function cleanSettings(v: unknown): Settings {
   const reminder = obj(o.reminder);
   const time = typeof reminder?.time === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(reminder.time) ? reminder.time : d.reminder.time;
   const lock = num(o.autoLockMinutes);
+  const rhythm = obj(o.rhythm), day = num(rhythm?.day);
   return {
     lang: o.lang === 'en' || o.lang === 'cs' ? o.lang : 'auto',
     theme: o.theme === 'light' || o.theme === 'dark' ? o.theme : 'auto',
@@ -286,6 +288,7 @@ function cleanSettings(v: unknown): Settings {
     reminder: { enabled: reminder?.enabled === true, time },
     badge: o.badge === 'remaining' || o.badge === 'reminder' ? o.badge : 'off',
     quickLog: o.quickLog !== false,
+    rhythm: { weekly: rhythm?.weekly === true, day: day != null && Number.isInteger(day) && day >= 0 && day <= 6 ? day : 0 },
     lastBackupAt: num(o.lastBackupAt),
     backupSnoozeUntil: num(o.backupSnoozeUntil),
   };

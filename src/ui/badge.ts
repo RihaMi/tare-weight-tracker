@@ -1,6 +1,7 @@
 import { app, profile } from '../app';
 import { calc } from '../lib/calc';
 import { todayISO } from '../lib/dates';
+import { weighInDue } from '../lib/rhythm';
 import { disp } from '../lib/units';
 
 type BadgeNavigator = Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
@@ -9,7 +10,7 @@ export const badgeSupported = (): boolean => typeof (navigator as BadgeNavigator
 
 /**
  * Updates the installed app's icon badge: the weight left to the goal (whole
- * kg or lb, as the original app did), or a dot until today's weigh-in.
+ * kg or lb, as the original app did), or a dot while a weigh-in is due (see rhythm.ts).
  */
 export function updateBadge(): void {
   const nav = navigator as BadgeNavigator;
@@ -24,6 +25,6 @@ export function updateBadge(): void {
     if (n > 0) void nav.setAppBadge!(n).catch(() => {}); else clear();
     return;
   }
-  if (p.entries.some(e => e.date === todayISO())) clear();
-  else void nav.setAppBadge!().catch(() => {});
+  if (weighInDue(app.data.settings.rhythm, p.entries, todayISO())) void nav.setAppBadge!().catch(() => {});
+  else clear();
 }

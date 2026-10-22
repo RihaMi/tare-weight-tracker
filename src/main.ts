@@ -21,6 +21,7 @@ import { bindProfile, downloadBackup, profileView, resetImport } from './ui/view
 import { backupNudge } from './lib/backupNudge';
 import { announceSaved, initTabSync } from './ui/sync';
 import { isWeakKey, keyInfoFor, newKeyInfo, seal, unseal, type Envelope } from './lib/crypto';
+import { weighInDue } from './lib/rhythm';
 import { verifyPin } from './lib/pin';
 import { initPasskeySupport } from './lib/passkey';
 import { askToKeep } from './ui/keepData';
@@ -67,7 +68,7 @@ function drawOverviewChart(): void {
 
 function reminderBanner(): string {
   const rem = app.data.settings.reminder, p = profile();
-  if (!rem.enabled || !isPastTime(rem.time) || p.entries.some(e => e.date === todayISO())) return '';
+  if (!rem.enabled || !isPastTime(rem.time) || !weighInDue(app.data.settings.rhythm, p.entries, todayISO())) return '';
   const text = app.data.profiles.length > 1 ? t('reminder.bannerFor', { name: esc(p.name) }) : t('reminder.banner');
   return `<div class="banner remind"><span>${text}</span>
     <button class="btn primary" data-act="log">${t('reminder.log')}</button></div>`;
@@ -133,7 +134,7 @@ function render(): void {
 const QUICK_KEY = 'tare.quickLogDay';
 function maybeQuickLog(): void {
   const p = profile(), today = todayISO();
-  if (!app.data.settings.quickLog || p.sample || !p.entries.length || p.entries.some(e => e.date === today)) return;
+  if (!app.data.settings.quickLog || p.sample || !p.entries.length || !weighInDue(app.data.settings.rhythm, p.entries, today)) return;
   if (isLocked() || $<HTMLDialogElement>('#entryDlg').open) return;
   try { if (localStorage.getItem(QUICK_KEY) === today) return; localStorage.setItem(QUICK_KEY, today); } catch { /* still open it once now */ }
   openEntry();

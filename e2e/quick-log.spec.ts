@@ -16,7 +16,6 @@ async function awayAndBack(page: Page, minutes: number) {
 }
 
 test('opens after a real break, not on return from a download or share sheet', async ({ page }) => {
-  await page.clock.install();
   await page.goto('/');
   await createProfile(page, 'Sam');
   await page.locator('#logBtn').click();

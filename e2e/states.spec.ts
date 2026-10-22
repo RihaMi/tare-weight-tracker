@@ -92,7 +92,8 @@ test('a failed save shows a banner until saving works again', async ({ page }) =
 
 test('an unexpected error shows a bar with Reload', async ({ page }) => {
   await started(page);
-  await page.evaluate(() => { setTimeout(() => { throw new Error('test: something broke'); }); });
+  // From a microtask: the test clock runs timers itself, so an error in a timer wouldn't reach the page.
+  await page.evaluate(() => { queueMicrotask(() => { throw new Error('test: something broke'); }); });
   await expect(page.locator('#errorBar')).toBeVisible();
   await page.locator('#errorClose').click();
   await expect(page.locator('#errorBar')).toBeHidden();

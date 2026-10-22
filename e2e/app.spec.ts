@@ -53,20 +53,22 @@ test('switches units', async ({ page }) => {
 });
 
 test('a PIN locks the app until it is entered', async ({ page }) => {
+  // Each PIN step derives the key on purpose slowly; with many browsers testing at once it takes a while.
+  const slow = { timeout: 30_000 };
   await page.goto('/#profile');
   await page.locator('[data-pin=set]').click();
   await page.locator('#pinNew').fill('2580');
   await page.locator('#pinRepeat').fill('2580');
   await page.locator('#pinForm button[type=submit]').click();
-  await expect(page.locator('[data-pin=remove]')).toBeVisible();
+  await expect(page.locator('[data-pin=remove]')).toBeVisible(slow);
 
   await page.reload();
   await expect(page.locator('#lock')).toBeVisible();
   await expect(page.locator('#view')).not.toContainText('Alex');
   await page.keyboard.type('1111');
-  await expect(page.locator('#lockMsg')).toHaveText(/wrong/i);
+  await expect(page.locator('#lockMsg')).toHaveText(/wrong/i, slow);
   for (const d of '2580') await page.locator(`#keypad [data-key="${d}"]`).click();
-  await expect(page.locator('#lock')).toBeHidden();
+  await expect(page.locator('#lock')).toBeHidden(slow);
   await expect(page.locator('#view')).toBeVisible();
 });
 

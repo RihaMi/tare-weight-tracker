@@ -53,9 +53,9 @@ describe('migrate', () => {
 
   it('keeps valid settings and drops invalid ones', () => {
     const pin = { hash: 'h', salt: 's', iterations: 150000, length: 4 };
-    const d = migrate({ ...v1, version: 3, settings: { lang: 'cs', theme: 'dark', pin, autoLockMinutes: 5, reminder: { enabled: true, time: '06:45' }, badge: 'remaining', quickLog: false, lastBackupAt: 123, backupSnoozeUntil: 456 } });
-    expect(d.settings).toEqual({ lang: 'cs', theme: 'dark', pin, autoLockMinutes: 5, reminder: { enabled: true, time: '06:45' }, badge: 'remaining', quickLog: false, lastBackupAt: 123, backupSnoozeUntil: 456 });
-    const bad = migrate({ ...v1, version: 3, settings: { lang: 'de', theme: 'sepia', pin: { hash: 1 }, autoLockMinutes: -3, reminder: { enabled: 'yes', time: '25:00' }, badge: 'x' } });
+    const d = migrate({ ...v1, version: 3, settings: { lang: 'cs', theme: 'dark', pin, autoLockMinutes: 5, reminder: { enabled: true, time: '06:45' }, badge: 'remaining', quickLog: false, rhythm: { weekly: true, day: 2 }, lastBackupAt: 123, backupSnoozeUntil: 456 } });
+    expect(d.settings).toEqual({ lang: 'cs', theme: 'dark', pin, autoLockMinutes: 5, reminder: { enabled: true, time: '06:45' }, badge: 'remaining', quickLog: false, rhythm: { weekly: true, day: 2 }, lastBackupAt: 123, backupSnoozeUntil: 456 });
+    const bad = migrate({ ...v1, version: 3, settings: { lang: 'de', theme: 'sepia', pin: { hash: 1 }, autoLockMinutes: -3, reminder: { enabled: 'yes', time: '25:00' }, badge: 'x', rhythm: { weekly: 'yes', day: 9 } } });
     expect(bad.settings).toEqual(defaultSettings());
   });
 

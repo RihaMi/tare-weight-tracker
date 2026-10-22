@@ -4,6 +4,7 @@ import { applyTheme } from '../theme';
 import { detectLang, t, type Key } from '../../i18n';
 import { addDays, todayISO } from '../../lib/dates';
 import { dailyReminderICS, isPastTime } from '../../lib/ics';
+import { nextWeighDay } from '../../lib/rhythm';
 import { hashPin, isValidPin, verifyPin } from '../../lib/pin';
 import { newKeyInfo } from '../../lib/crypto';
 import { enablePasskey, forgetPasskey, passkeyEnabled, passkeySupported } from '../../lib/passkey';
@@ -72,6 +73,15 @@ export function settingsCard(): string {
       <div class="setting">
         <div class="setting-text"><h3>${t('settings.quickLog')}</h3><p class="note flush">${t('settings.quickLogText')}</p></div>
         <div class="setting-ctl"><label class="switch"><input type="checkbox" id="quickLogOn" ${s.quickLog ? 'checked' : ''}><span>${t('settings.quickLogOn')}</span></label></div>
+      </div>
+      <div class="setting">
+        <div class="setting-text"><h3>${t('settings.rhythm')}</h3><p class="note flush">${t('settings.rhythmText')}</p></div>
+        <div class="setting-ctl">
+          <select id="rhythm" aria-label="${esc(t('settings.rhythm'))}">
+            <option value="daily" ${s.rhythm.weekly ? '' : 'selected'}>${t('settings.rhythmDaily')}</option>
+            ${[0, 1, 2, 3, 4, 5, 6].map(d => `<option value="${d}" ${s.rhythm.weekly && s.rhythm.day === d ? 'selected' : ''}>${t(`settings.rhythmWeekly${d}` as Key)}</option>`).join('')}
+          </select>
+        </div>
       </div>
       <div class="setting">
         <div class="setting-text"><h3>${t('settings.reminder')}</h3><p class="note flush">${t('settings.reminderText')}</p></div>
@@ -168,11 +178,18 @@ export function bindSettings(): void {
     app.data.settings.reminder.time = v;
     commit(t('settings.reminderTimeSaved'));
   });
+  $('#rhythm').addEventListener('change', ev => {
+    const v = (ev.target as HTMLSelectElement).value;
+    app.data.settings.rhythm = v === 'daily' ? { weekly: false, day: app.data.settings.rhythm.day } : { weekly: true, day: +v };
+    commit(t('settings.rhythmSaved'));
+    updateBadge();
+  });
   $('#remIcs').addEventListener('click', () => {
     const time = $<HTMLInputElement>('#remTime').value || app.data.settings.reminder.time;
-    const start = isPastTime(time) ? addDays(todayISO(), 1) : todayISO();
-    download('tare-daily-reminder.ics', dailyReminderICS({
-      startDate: start, time, title: t('settings.icsTitle'), description: t('settings.icsText'),
+    const r = app.data.settings.rhythm;
+    const start = nextWeighDay(r, isPastTime(time) ? addDays(todayISO(), 1) : todayISO());
+    download(r.weekly ? 'tare-weekly-reminder.ics' : 'tare-daily-reminder.ics', dailyReminderICS({
+      startDate: start, time, title: t('settings.icsTitle'), description: t('settings.icsText'), weekday: r.weekly ? r.day : undefined,
       uid: `tare-daily-${Date.now()}@tare`,
     }), 'text/calendar');
     toast(t('settings.icsDownloaded'));

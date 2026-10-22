@@ -1,11 +1,12 @@
-import { unit } from '../../app';
+import { app, unit } from '../../app';
 import type { Profile, Unit } from '../../data/schema';
 import { t, tn, type Key } from '../../i18n';
 import type { Stats } from '../../lib/calc';
-import { daysBetween, fmtDate, todayISO } from '../../lib/dates';
+import { addDays, daysBetween, fmtDate, todayISO } from '../../lib/dates';
 import { pastProgress } from '../../lib/goals';
 import { milestoneStepKg, milestones, plateau, streaks, weekdayPattern, weeklyAverages, weekStart, type Milestone, type NextMilestone } from '../../lib/insights';
 import { monthRecap, previousMonth } from '../../lib/recap';
+import { nextWeighDay } from '../../lib/rhythm';
 import { yearReview } from '../../lib/yearReview';
 import { LB, fmtDelta, fmtW } from '../../lib/units';
 import { esc } from '../dom';
@@ -122,6 +123,9 @@ export function thisWeekCard(p: Profile, r: Stats): string {
   const current = weeks.find(w => w.week === weekStart(today));
   const shown = current ?? weeks[0];
   const s = streaks(r.E, today);
+  // Weighing weekly, a daily streak means nothing; the next weigh day does.
+  const rhythm = app.data.settings.rhythm;
+  const nextWeigh = nextWeighDay(rhythm, s.loggedToday ? addDays(today, 1) : today);
   const { achieved, next } = milestonesFor(p, r);
   const recent = achieved.slice(-2).reverse();
   const tone = (v: number | null) => (v == null ? '' : r.dir * v > 0.05 ? 'good' : r.dir * v < -0.05 ? 'bad' : '');
@@ -131,7 +135,9 @@ export function thisWeekCard(p: Profile, r: Stats): string {
     <div class="stats">
       <div class="stat"><span class="v">${fmtW(shown.avg, u)}</span><span class="k">${tn('week.average', shown.n)}</span></div>
       <div class="stat"><span class="v ${tone(shown.change)}">${shown.change == null ? '—' : fmtDelta(shown.change, u)}</span><span class="k">${t('week.vsPrev')}</span></div>
-      <div class="stat"><span class="v">${tn('week.days', s.days)}</span><span class="k">${t('week.dailyStreak', { n: s.longestDays })}</span></div>
+      ${p.sample || !app.data.settings.rhythm.weekly
+        ? `<div class="stat"><span class="v">${tn('week.days', s.days)}</span><span class="k">${t('week.dailyStreak', { n: s.longestDays })}</span></div>`
+        : `<div class="stat"><span class="v date">${nextWeigh === today ? t('week.today') : fmtDate(nextWeigh, { weekday: 'short', day: 'numeric', month: 'short' })}</span><span class="k">${t('week.nextWeighIn')}</span></div>`}
       <div class="stat"><span class="v">${tn('week.weeks', s.weeks)}</span><span class="k">${t('week.weeksInRow')}</span></div>
     </div>
     ${next ? `<div class="next-ms">

@@ -67,5 +67,7 @@ export function sampleProfile(today = todayISO(), text: SampleText = ENGLISH): P
     goalSteps: [{ id: 'sample_st_85', kg: 85, date: null }, { id: 'sample_st_82', kg: 82, date: addDays(today, 42) }],
     cycleTracking: false,
     periodStarts: [],
+    pastGoals: [],
+    deleted: [],
   };
 }

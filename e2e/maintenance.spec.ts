@@ -1,14 +1,12 @@
-import { expect, test, type Page } from './fixtures';
+import { dayFromToday, expect, test, type Page } from './fixtures';
 
 // After the goal: staying in the range around it.
 
 /** A CSV of daily weigh-ins ending today: down from 90 to 80 kg, then `after` for the remaining days. */
 function history(total: number, after: (daysAfter: number) => number): string {
-  const today = new Date();
   const rows = Array.from({ length: total }, (_, i) => {
-    const d = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate() - (total - 1 - i)));
     const kg = i <= 50 ? 90 - i * 0.2 : after(i - 50);
-    return `${d.toISOString().slice(0, 10)},${kg.toFixed(1)}`;
+    return `${dayFromToday(i - (total - 1))},${kg.toFixed(1)}`;
   });
   return 'date,weight_kg\n' + rows.join('\n') + '\n';
 }

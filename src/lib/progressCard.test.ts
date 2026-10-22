@@ -32,4 +32,15 @@ describe('progress card', () => {
     expect(m.recent.map(x => x.date)).toEqual(['2026-03-01', '2026-03-01', '2026-03-01']);
     expect(m.recent.map(x => x.kind).sort()).toEqual(['bmi', 'goal', 'weight']);
   });
+
+  it('can cover just one period, such as a year, keeping the goal from the whole history', () => {
+    const p = profile([e('2025-11-01', 96), e('2025-12-20', 94), e('2026-01-05', 93.5), e('2026-06-01', 88), e('2026-12-28', 85), e('2027-01-03', 84.8)], 80);
+    const m = cardModel(p, 'kg', '2027-01-04', { from: '2026-01-01', to: '2026-12-31' })!;
+    expect([m.from, m.to, m.count]).toEqual(['2026-01-05', '2026-12-28', 3]);
+    expect([m.startKg, m.curKg]).toEqual([93.5, 85]);
+    expect(m.changeKg).toBeCloseTo(-8.5, 5);
+    expect(m.progress).toBeCloseTo((96 - 84.8) / (96 - 80), 5);   // still from the whole history
+    expect(m.recent.every(x => x.date >= '2026-01-05' && x.date <= '2026-12-28')).toBe(true);
+    expect(cardModel(p, 'kg', '2027-01-04', { from: '2024-01-01', to: '2024-12-31' })).toBeNull();
+  });
 });

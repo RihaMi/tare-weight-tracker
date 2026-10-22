@@ -2,6 +2,7 @@ import { app, commit, profile, unit } from '../app';
 import { MEASURES, cleanComposition, newId, type Entry, type Measures } from '../data/schema';
 import { calc, sortedEntries } from '../lib/calc';
 import { unlikelyWeight } from '../lib/plausible';
+import { entryDeleted } from '../lib/deletions';
 import { newMilestones } from '../lib/insights';
 import { milestoneLabel, milestonesFor } from './views/insights';
 import { todayISO } from '../lib/dates';
@@ -124,6 +125,8 @@ function submit(ev: SubmitEvent): void {
   const before = milestonesFor(p, calc(p)).achieved;
   const old = p.entries.find(e => e.date === (editing ?? date));
   p.entries = p.entries.filter(e => e.date !== date && e.date !== editing);
+  // Moved to another date: the old date's weigh-in is gone.
+  if (editing && editing !== date) entryDeleted(p, editing);
   const e: Entry = { id: old?.id ?? newId('e_'), date, kg: Math.round(kg * 100) / 100, updatedAt: Date.now() };
   const note = $<HTMLTextAreaElement>('#eNote').value.trim();
   if (note) e.note = note.slice(0, 500);
@@ -163,6 +166,7 @@ export function initEntryDialog(): void {
     armOrRun(ev.currentTarget as HTMLButtonElement, t('entry.confirmDelete'), () => {
       const p = profile(), gone = p.entries.find(e => e.date === editing)!;
       p.entries = p.entries.filter(e => e.date !== editing);
+      entryDeleted(p, editing!);
       p.updatedAt = Date.now();
       dlg().close();
       commitWithUndo(t('entry.deleted'), () => {

@@ -4,8 +4,8 @@
 // monospaced font they take a whole digit's width ("84 , 1", "2 170").
 
 const FIGURES = '.num, .mono, .reading, .kcal, .ruler-labels b, .stat .v, .kv dd, .row .w, .row .c, .mcard .v, .ledger dd, .macros b, .week-table .num';
-// With the space before it, which would otherwise be a whole digit wide.
-const WORD = /(\s?(?:\p{L}[\p{L}.]*|%))/u;
+// With the spaces around it, which would otherwise be a whole digit wide ("18 of 31").
+const WORD = /(\s?(?:\p{L}[\p{L}.]*|%)\s?)/u;
 const SEPARATOR = /(?<=\d)([.,\s])(?=\d)/u;
 
 function split(el: Element, pattern: RegExp, cls: string): void {

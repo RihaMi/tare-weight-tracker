@@ -154,3 +154,26 @@ describe('CSV export and spreadsheet formulas', () => {
     expect(lines[0].startsWith('2026-10-19,80,')).toBe(true);
   });
 });
+
+describe('goal history', () => {
+  it('starts empty for older data, keeps valid past goals and drops broken ones', () => {
+    expect(migrate({ version: 8, unit: 'kg', profiles: [{ id: 'a', name: 'A', entries: [] }] }).profiles[0].pastGoals).toEqual([]);
+    const goal = { id: 'g1', from: '2026-01-05', to: '2026-04-02', startKg: 92.4, goalKg: 85, endKg: 84.6, reached: '2026-03-03' };
+    const data = migrate({ version: 9, unit: 'kg', profiles: [{ id: 'a', name: 'A', entries: [], pastGoals: [goal, { ...goal, id: 'bad', goalKg: 'x' }, { ...goal, id: 'no-date', to: 'soon' }] }] });
+    expect(data.profiles[0].pastGoals).toEqual([goal]);
+  });
+});
+
+describe('remembered deletes', () => {
+  it('start empty for older data, and keep only valid ones', () => {
+    const old = migrate({ version: 9, unit: 'kg', profiles: [{ id: 'a', name: 'A', entries: [] }] });
+    expect(old.profiles[0].deleted).toEqual([]);
+    expect(old.deletedProfiles).toEqual([]);
+    const now = migrate({
+      version: 10, unit: 'kg', deletedProfiles: [{ id: 'p1', at: 5 }, { id: '', at: 1 }],
+      profiles: [{ id: 'a', name: 'A', entries: [], deleted: [{ kind: 'entry', date: '2026-10-02', at: 7 }, { kind: 'event', id: 'x', at: 3 }, { kind: 'entry', date: 'soon', at: 1 }, { kind: 'other', at: 2 }] }],
+    });
+    expect(now.profiles[0].deleted).toEqual([{ kind: 'event', id: 'x', at: 3 }, { kind: 'entry', date: '2026-10-02', at: 7 }]);
+    expect(now.deletedProfiles).toEqual([{ id: 'p1', at: 5 }]);
+  });
+});

@@ -2,9 +2,13 @@ import { unit } from '../../app';
 import type { Profile, Unit } from '../../data/schema';
 import { t, tn, type Key } from '../../i18n';
 import type { Stats } from '../../lib/calc';
-import { fmtDate, todayISO } from '../../lib/dates';
+import { daysBetween, fmtDate, todayISO } from '../../lib/dates';
+import { pastProgress } from '../../lib/goals';
 import { milestoneStepKg, milestones, plateau, streaks, weekdayPattern, weeklyAverages, weekStart, type Milestone, type NextMilestone } from '../../lib/insights';
+import { monthRecap, previousMonth } from '../../lib/recap';
+import { yearReview } from '../../lib/yearReview';
 import { LB, fmtDelta, fmtW } from '../../lib/units';
+import { esc } from '../dom';
 
 /** A milestone amount in the unit people think in: 5 kg, 10 lb, 1 st. */
 export function fmtStep(kg: number, u: Unit): string {
@@ -43,6 +47,74 @@ export const milestonesFor = (p: Profile, r: Stats) => milestones({ entries: r.E
 
 const msItem = (m: Milestone, dir: number, u: Unit, date: string) =>
   `<li><span class="ms-dot ${m.kind}"></span><span>${milestoneLabel(m, dir, u)}</span><span class="muted">${date}</span></li>`;
+
+// The month recap shows in the first week of a month, about the month before, until closed.
+const RECAP_CLOSED_KEY = 'tare.recapClosed';
+function recapClosed(): Record<string, string> {
+  try { const v = JSON.parse(localStorage.getItem(RECAP_CLOSED_KEY) ?? '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; }
+}
+export function closeRecap(p: Profile, month: string): void {
+  try { localStorage.setItem(RECAP_CLOSED_KEY, JSON.stringify({ ...recapClosed(), [p.id]: month })); } catch { /* shows again next time */ }
+}
+
+/** Last month at a glance: trend change, average, days logged, best week, milestones and events. */
+export function recapCard(p: Profile, r: Stats): string {
+  const today = todayISO();
+  if (Number(today.slice(8, 10)) > 7) return '';
+  const month = previousMonth(today);
+  if (recapClosed()[p.id] === month) return '';
+  const rc = monthRecap(r.E, month, r.dir);
+  if (!rc) return '';
+  const u = unit(), short = (d: string) => fmtDate(d, { day: 'numeric', month: 'short' });
+  const toward = (v: number) => (r.dir * v > 0.05 ? 'good' : r.dir * v < -0.05 ? 'bad' : '');
+  const tiles: Array<[string, string, string]> = [
+    [t('recap.change'), fmtDelta(rc.changeKg, u), toward(rc.changeKg)],
+    [t('recap.avg'), fmtW(rc.avgKg, u), ''],
+    [t('recap.days'), t('recap.daysValue', { n: rc.daysLogged, d: rc.daysInMonth }), ''],
+    rc.bestWeek ? [t('recap.best', { date: short(rc.bestWeek.week) }), fmtDelta(rc.bestWeek.changeKg, u), 'good'] : [t('recap.noBest'), '—', ''],
+  ];
+  const reached = milestonesFor(p, r).achieved.filter(m => m.date.startsWith(month));
+  const started = p.events.filter(ev => ev.start.startsWith(month));
+  return `<section class="card recap">
+    <div class="card-head"><h2>${t('recap.title', { month: fmtDate(month + '-01', { month: 'long' }) })}</h2><button type="button" class="btn ghost small-btn" data-act="closeRecap" data-month="${month}">${t('common.close')}</button></div>
+    <div class="stats">${tiles.map(([k, v, c]) => `<div class="stat"><span class="v ${c}">${esc(v)}</span><span class="k">${k}</span></div>`).join('')}</div>
+    ${reached.length ? `<h3 class="sub-h">${t('recap.milestones')}</h3><ul class="ms-list compact">${reached.map(m => msItem(m, r.dir, u, short(m.date))).join('')}</ul>` : ''}
+    ${started.length ? `<h3 class="sub-h">${t('recap.events')}</h3><ul class="recap-events">${started.map(ev => `<li>${esc(ev.label)} <span class="muted">${short(ev.start)}</span></li>`).join('')}</ul>` : ''}
+  </section>`;
+}
+
+// The year in review shows in the first two weeks of January, about the year before, until closed.
+const YEAR_CLOSED_KEY = 'tare.yearClosed';
+function yearClosed(): Record<string, string> {
+  try { const v = JSON.parse(localStorage.getItem(YEAR_CLOSED_KEY) ?? '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; }
+}
+export function closeYear(p: Profile, year: string): void {
+  try { localStorage.setItem(YEAR_CLOSED_KEY, JSON.stringify({ ...yearClosed(), [p.id]: year })); } catch { /* shows again next time */ }
+}
+
+/** Last year at a glance: trend change, weigh-ins, best month, longest streak and milestones, with a picture to share. */
+export function yearCard(p: Profile, r: Stats): string {
+  const today = todayISO();
+  if (today.slice(5, 7) !== '01' || Number(today.slice(8, 10)) > 14) return '';
+  const year = String(Number(today.slice(0, 4)) - 1);
+  if (yearClosed()[p.id] === year) return '';
+  const y = yearReview(r.E, year, r.dir);
+  if (!y) return '';
+  const u = unit();
+  const toward = r.dir * y.changeKg > 0.05 ? 'good' : r.dir * y.changeKg < -0.05 ? 'bad' : '';
+  const tiles: Array<[string, string, string]> = [
+    [t('year.change'), fmtDelta(y.changeKg, u), toward],
+    [t('year.weighIns'), String(y.weighIns), ''],
+    y.bestMonth ? [t('year.best', { month: fmtDate(y.bestMonth.month + '-01', { month: 'long' }) }), fmtDelta(y.bestMonth.changeKg, u), 'good'] : [t('year.noBest'), '—', ''],
+    [t('year.streak'), tn('week.days', y.longestStreak), ''],
+  ];
+  const reached = milestonesFor(p, r).achieved.filter(m => m.date.startsWith(year + '-'));
+  return `<section class="card recap year">
+    <div class="card-head"><h2>${t('year.title', { year })}</h2><span class="actions"><button type="button" class="btn small-btn" data-act="shareYear" data-from="${y.from}" data-to="${y.to}">${t('year.share')}</button><button type="button" class="btn ghost small-btn" data-act="closeYear" data-year="${year}">${t('common.close')}</button></span></div>
+    <div class="stats">${tiles.map(([k, v, c]) => `<div class="stat"><span class="v ${c}">${esc(v)}</span><span class="k">${k}</span></div>`).join('')}</div>
+    ${reached.length ? `<h3 class="sub-h">${t('recap.milestones')}</h3><ul class="ms-list compact">${reached.map(m => msItem(m, r.dir, u, fmtDate(m.date, { day: 'numeric', month: 'short' }))).join('')}</ul>` : ''}
+  </section>`;
+}
 
 export function thisWeekCard(p: Profile, r: Stats): string {
   const u = unit(), today = todayISO();
@@ -141,6 +213,22 @@ export function weeklyCard(r: Stats, showAll: boolean): string {
       }).join('')}</tbody></table></div>
     ${weeks.length > WEEKS_SHOWN ? `<div class="actions start"><button type="button" class="btn ghost small-btn" data-act="toggleWeeks">${showAll ? t('weekly.fewer') : t('weekly.all', { n: weeks.length })}</button></div>` : ''}
   </section>`;
+}
+
+/** Goals a new one replaced, newest first, under the one you have now. Nothing until a goal has been replaced. */
+export function goalsCard(p: Profile, r: Stats): string {
+  if (!p.pastGoals.length) return '';
+  const u = unit(), long = (d: string) => fmtDate(d, { day: 'numeric', month: 'short', year: 'numeric' });
+  const span = (from: string, to: string) => { const d = daysBetween(from, to); return d < 14 ? tn('week.days', Math.max(1, d)) : tn('week.weeks', Math.round(d / 7)); };
+  const range = (startKg: number, goalKg: number) => `${fmtW(startKg, u)} → ${fmtW(goalKg, u)}`;
+  const since = p.pastGoals.at(-1)!.to;
+  const startNow = r.E.find(e => e.date >= since)?.kg ?? p.pastGoals.at(-1)!.endKg;
+  const current = p.goalKg != null
+    ? `<li><span class="ms-dot progress"></span><span><b>${range(startNow, p.goalKg)}</b><small>${t('goals.current')}</small></span><span class="muted">${t('goals.since', { date: long(since) })}</span></li>` : '';
+  const past = [...p.pastGoals].reverse().map(g => `<li><span class="ms-dot ${g.reached ? 'goal' : 'step'}"></span><span><b>${range(g.startKg, g.goalKg)}</b><small>${g.reached
+    ? t('goals.reached', { time: span(g.from, g.reached) })
+    : t('goals.partway', { pct: Math.round(pastProgress(g) * 100) })}</small></span><span class="muted">${long(g.from)} – ${long(g.to)}</span></li>`).join('');
+  return `<section class="card" id="goalsCard"><div class="card-head"><h2>${t('goals.title')}</h2></div><ul class="ms-list goals-list">${current}${past}</ul></section>`;
 }
 
 export function milestonesCard(p: Profile, r: Stats): string {

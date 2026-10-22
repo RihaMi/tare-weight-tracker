@@ -31,7 +31,7 @@ test('a backup from another device merges in, keeping what is only here, and can
   const chooser = page.waitForEvent('filechooser');
   await page.locator('#bkRestore').click();
   await (await chooser).setFiles({ name: 'other-device.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
-  await expect(page.locator('#restoreConfirm')).toContainText('nothing here is deleted');
+  await expect(page.locator('#restoreConfirm')).toContainText('stays deleted');
   await page.locator('#restoreMerge').click();
   await expect(page.locator('#toast')).toContainText('Merged: 1 new, 0 updated');
 
@@ -40,6 +40,54 @@ test('a backup from another device merges in, keeping what is only here, and can
   await page.keyboard.press('Control+z');
   await expect(page.locator('.row[data-edit="2026-10-03"]')).toHaveCount(0);
   await expect(page.locator('.row[data-edit="2026-10-02"]')).toHaveCount(1);
+});
+
+test('a weigh-in deleted after the backup was made stays deleted when merging it', async ({ page }) => {
+  await page.goto('/');
+  await createProfile(page, 'Sam');
+  await log(page, '2026-10-01', '80');
+  await log(page, '2026-10-02', '79.8');
+  await page.goto('/#profile');
+  const download = page.waitForEvent('download');
+  await page.locator('#bkDownload').click();
+  const file = readFileSync((await (await download).path())!);
+
+  // Delete the 2nd here, then merge the older backup that still has it.
+  await page.goto('/#history');
+  await page.locator('.row[data-edit="2026-10-02"]').click();
+  await page.locator('#eDelete').click();
+  await page.locator('#eDelete').click();
+  await expect(page.locator('.row[data-edit="2026-10-02"]')).toHaveCount(0);
+  await page.goto('/#profile');
+  const chooser = page.waitForEvent('filechooser');
+  await page.locator('#bkRestore').click();
+  await (await chooser).setFiles({ name: 'older.json', mimeType: 'application/json', buffer: file });
+  await page.locator('#restoreMerge').click();
+  await expect(page.locator('#toast')).toContainText('Nothing new in that backup');
+  await page.goto('/#history');
+  await expect(page.locator('.row[data-edit="2026-10-02"]')).toHaveCount(0);
+  await expect(page.locator('.row[data-edit="2026-10-01"]')).toHaveCount(1);
+});
+
+test('a weigh-in deleted on the other device is removed here by merging', async ({ page }) => {
+  await page.goto('/');
+  await createProfile(page, 'Sam');
+  await log(page, '2026-10-01', '80');
+  await log(page, '2026-10-02', '79.8');
+  await page.goto('/#profile');
+  const download = page.waitForEvent('download');
+  await page.locator('#bkDownload').click();
+  // "The other device" deleted the 2nd after this device last changed it.
+  const backup = JSON.parse(readFileSync((await (await download).path())!, 'utf8'));
+  backup.profiles[0].entries = backup.profiles[0].entries.filter((x: { date: string }) => x.date !== '2026-10-02');
+  backup.profiles[0].deleted = [{ kind: 'entry', date: '2026-10-02', at: Date.now() + 60_000 }];
+  const chooser = page.waitForEvent('filechooser');
+  await page.locator('#bkRestore').click();
+  await (await chooser).setFiles({ name: 'other.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
+  await page.locator('#restoreMerge').click();
+  await expect(page.locator('#toast')).toContainText('1 removed');
+  await page.goto('/#history');
+  await expect(page.locator('.row[data-edit="2026-10-02"]')).toHaveCount(0);
 });
 
 test('merging the same backup again finds nothing new', async ({ page }) => {

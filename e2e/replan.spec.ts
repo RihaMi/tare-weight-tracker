@@ -1,14 +1,12 @@
-import { expect, test, type Page } from './fixtures';
+import { dayFromToday, expect, test, type Page } from './fixtures';
 
 // Behind the goal date: Overview shows the pace keeping the date now takes, and offers a
 // realistic new date, which one tap sets (with Undo). "Not now" hides it for two weeks.
 
-const iso = (d: Date) => d.toISOString().slice(0, 10);
-const daysFromToday = (n: number) => { const t = new Date(); return iso(new Date(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate() + n))); };
 
 /** 80 days of daily weigh-ins ending today, losing 0.25 kg a week from 90 kg; goal 80 kg in ten weeks. */
 async function behindPace(page: Page) {
-  const rows = Array.from({ length: 80 }, (_, i) => `${daysFromToday(i - 79)},${(90 - (0.25 / 7) * i).toFixed(2)}`);
+  const rows = Array.from({ length: 80 }, (_, i) => `${dayFromToday(i - 79)},${(90 - (0.25 / 7) * i).toFixed(2)}`);
   await page.goto('/#profile');
   await page.evaluate(() => navigator.serviceWorker.ready);
   const chooser = page.waitForEvent('filechooser');
@@ -17,7 +15,7 @@ async function behindPace(page: Page) {
   await page.locator('#importGo').click();
   await page.goto('/#profile');
   await page.locator('#pGoal').fill('80');
-  await page.locator('#pGoalDate').fill(daysFromToday(70));
+  await page.locator('#pGoalDate').fill(dayFromToday(70));
   await page.locator('#profForm button[type=submit]').click();
   await page.goto('/#overview');
 }

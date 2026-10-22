@@ -360,6 +360,8 @@ export const cs: Record<Key, string | Plural> = {
 
   'history.empty': 'Zatím žádná historie',
   'history.title': 'Všechna vážení',
+  'history.searchNotes': 'Hledat v poznámkách',
+  'history.noNotes': 'Žádné vážení s „{q}“ v poznámce.',
   'history.good': 'Podle plánu nebo lépe',
   'history.warn': 'Pomaleji než plán',
   'history.bad': 'Vzdálení od cíle',

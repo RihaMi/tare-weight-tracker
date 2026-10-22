@@ -14,7 +14,7 @@ import { initEntryDialog, openEntry } from './ui/entryDialog';
 import { openEvent } from './ui/eventDialog';
 import { bodyView } from './ui/views/body';
 import { bindCalories, caloriesView, resetCalories } from './ui/views/calories';
-import { historyView, toggleWeeks } from './ui/views/history';
+import { bindHistory, historyView, toggleWeeks } from './ui/views/history';
 import { overviewView, rememberChartTable, replanLater } from './ui/views/overview';
 import { closeRecap, closeYear } from './ui/views/insights';
 import { bindProfile, downloadBackup, profileView, resetImport } from './ui/views/profile';
@@ -121,6 +121,7 @@ function render(): void {
   view.innerHTML = saveBanner() + (app.tab === 'profile' ? '' : reminderBanner() + (app.tab === 'overview' ? backupBanner() : '') + sampleBanner()) + VIEWS[app.tab]();
   if (app.tab === 'overview') drawOverviewChart();
   if (app.tab === 'calories') bindCalories();
+  if (app.tab === 'history') bindHistory();
   if (app.tab === 'profile') bindProfile(); else { resetSettingsForm(); resetImport(); }
   updateBadge();
 }
@@ -231,6 +232,14 @@ function newProfile(): void {
 
 function bindGlobalEvents(): void {
   $('#logBtn').addEventListener('click', () => openEntry());
+  // "N" opens the log form from anywhere, except while typing or with a dialog or the lock open.
+  document.addEventListener('keydown', ev => {
+    if (ev.key.toLowerCase() !== 'n' || ev.ctrlKey || ev.metaKey || ev.altKey || ev.repeat) return;
+    if ((ev.target as HTMLElement).closest('input, textarea, select, [contenteditable]')) return;
+    if (isLocked() || document.querySelector('dialog[open]')) return;
+    ev.preventDefault();
+    openEntry();
+  });
   // "toggle" doesn't bubble, so it's caught on the way down.
   document.addEventListener('toggle', ev => {
     const d = ev.target as HTMLDetailsElement;

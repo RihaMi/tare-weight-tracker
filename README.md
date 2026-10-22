@@ -124,7 +124,7 @@ public/        icons (npm run icons) and the install dialog's screenshots (npm r
 
 The same command runs the layout check, `scripts/visual-audit.js`, on every screen. It runs at 320, 414, 768 and 1440 px wide, in light and dark mode, in English and Czech. It looks for sideways scrolling, elements off the screen, cut-off or covered text, text drawn across a bar or badge, and contrast below WCAG AA. You can also paste the script into the browser console and run `await tareAudit()`.
 
-On every pull request, GitHub Actions runs the unit tests, the browser tests and Lighthouse. Lighthouse must score 100 for accessibility and at least 90 for best practices; its report is saved with the run. Dependabot opens weekly pull requests for package and GitHub Actions updates.
+On every pull request, GitHub Actions runs the unit tests, the browser tests (desktop, phone and iPhone side by side, in three jobs) and Lighthouse. Lighthouse must score 100 for accessibility and at least 90 for best practices; its report is saved with the run. Dependabot opens weekly pull requests for package and GitHub Actions updates.
 
 Every browser test starts on the same day, 20 October 2026 at 09:00 (`e2e/fixtures.ts`), so a run on the 1st of a month or in January behaves like any other; a test that needs a different day sets its own.
 

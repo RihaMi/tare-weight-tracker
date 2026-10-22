@@ -1,7 +1,7 @@
 import { profile, unit } from '../app';
 import { t, tn } from '../i18n';
 import { fmtDate, todayISO } from '../lib/dates';
-import { cardModel, chartRange, type CardModel } from '../lib/progressCard';
+import { cardModel, chartRange, type CardModel, type CardPeriod } from '../lib/progressCard';
 import { fmtDelta, fmtW } from '../lib/units';
 import { $, esc, toast } from './dom';
 import { milestoneLabel } from './views/insights';
@@ -184,8 +184,9 @@ function dialog(): HTMLDialogElement {
   return d;
 }
 
-export async function openShare(): Promise<void> {
-  const m = cardModel(profile(), unit(), todayISO());
+/** Opens the picture of your progress, or of one period such as a year. */
+export async function openShare(period?: CardPeriod): Promise<void> {
+  const m = cardModel(profile(), unit(), todayISO(), period);
   if (!m) return;
   const d = dialog();
   const canShare = (() => {

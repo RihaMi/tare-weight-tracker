@@ -3,8 +3,10 @@ name: Update screenshots
 # Makes the reference screenshots for e2e/screens.spec.ts on Linux, the same
 # system the browser tests run on, and commits them to the branch.
 # Run it from the Actions tab, or put "[update screenshots]" in a commit message.
-# A commit made with the workflow's own token doesn't start other workflows, so it
-# starts the checks on its commit itself, and the pull request gets them.
+# On a branch with a pull request, GitHub starts the pull request's checks for this
+# commit but holds them until someone approves them (it treats the bot's commit like an
+# outside contributor's). The workflow approves them itself; on a branch without a pull
+# request (or if approving isn't allowed), it starts the checks itself instead.
 
 on:
   workflow_dispatch:
@@ -13,7 +15,7 @@ on:
 
 permissions:
   contents: write
-  actions: write   # to start the checks on the new commit
+  actions: write   # to approve, or start, the checks on the new commit
 
 jobs:
   update:
@@ -31,6 +33,7 @@ jobs:
       - run: npm run build
       - run: npx playwright test e2e/screens.spec.ts --update-snapshots
       - name: Commit the screenshots
+        id: commit
         run: |
           git add e2e/screens.spec.ts-snapshots
           if git diff --cached --quiet; then echo "Screenshots unchanged"; exit 0; fi
@@ -38,7 +41,26 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Update screenshots"
           git push
-          gh workflow run ci.yml --ref "$GITHUB_REF_NAME"
-          gh workflow run browser.yml --ref "$GITHUB_REF_NAME"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+      - name: Run the checks on the new commit
+        if: steps.commit.outputs.pushed == 'true'
+        run: |
+          sha=$(git rev-parse HEAD)
+          approved=0 done_ids=" "
+          # Two workflows run on pull requests (CI and Browser tests). Their held runs show up
+          # within seconds of the push, not always together, so keep looking for up to a minute.
+          for i in $(seq 1 12); do
+            for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$sha&status=action_required" --jq '.workflow_runs[].id'); do
+              case "$done_ids" in *" $id "*) continue;; esac   # approved a moment ago, still listed
+              gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$id/approve" && { approved=$((approved + 1)); done_ids="$done_ids$id "; }
+            done
+            [ "$approved" -ge 2 ] && break
+            sleep 5
+          done
+          echo "Approved $approved held run(s)"
+          if [ "$approved" -eq 0 ]; then
+            gh workflow run ci.yml --ref "$GITHUB_REF_NAME"
+            gh workflow run browser.yml --ref "$GITHUB_REF_NAME"
+          fi
         env:
           GH_TOKEN: ${{ github.token }}

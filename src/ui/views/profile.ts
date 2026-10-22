@@ -1,6 +1,6 @@
 import { app, commit, go, profile, unit } from '../../app';
 import { backupKey, mergeEntries, readBackupFile, restoredData, toBackupJSON, toCSV } from '../../data/backup';
-import { isEnvelope, keyInfoFor, unseal, type Envelope } from '../../lib/crypto';
+import { isEnvelope, keyInfoFor, seal, unseal, type Envelope } from '../../lib/crypto';
 import { migrate } from '../../data/schema';
 import { formatLocale } from '../../lib/format';
 import { autoBackupState, backUpNow, chooseBackupFolder, resumeAutoBackup, stopAutoBackup } from '../autoBackup';
@@ -314,11 +314,14 @@ const fileStamp = () => todayISO();
 const todayISOFrom = (ms: number) => todayISO(new Date(ms));
 
 /** Downloads a full backup and remembers when, for the backup reminder. */
-export function downloadBackup(): void {
+/** Downloads a full backup; with a PIN it's encrypted with it, like the automatic backups. */
+export async function downloadBackup(): Promise<void> {
   app.data.settings.lastBackupAt = Date.now();
   app.data.settings.backupSnoozeUntil = null;
-  download(`tare-backup-${fileStamp()}.json`, toBackupJSON(app.data), 'application/json');
-  commit(t('backup.downloaded'));
+  const json = toBackupJSON(app.data);
+  const encrypt = !!(app.data.settings.pin && app.key);
+  download(`tare-backup-${fileStamp()}.json`, encrypt ? JSON.stringify(await seal(JSON.parse(json), app.key!)) : json, 'application/json');
+  commit(t(encrypt ? 'backup.downloadedEncrypted' : 'backup.downloaded'));
 }
 const slug = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'profile';
 

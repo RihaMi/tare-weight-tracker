@@ -1,4 +1,4 @@
-import { expect, test, type Page } from './fixtures';
+import { encryptedSaved, expect, test, type Page } from './fixtures';
 
 // The main things a person does in Tare, in a real browser.
 
@@ -60,7 +60,7 @@ test('a PIN locks the app until it is entered', async ({ page }) => {
   await page.locator('#pinNew').fill('2580');
   await page.locator('#pinRepeat').fill('2580');
   await page.locator('#pinForm button[type=submit]').click();
-  await expect(page.locator('[data-pin=remove]')).toBeVisible(slow);
+  await encryptedSaved(page);
 
   await page.reload();
   await expect(page.locator('#lock')).toBeVisible();

@@ -43,7 +43,7 @@ Inspired by the iOS app *Monitor Your Weight*, rebuilt with a cleaner, modern de
 
 **Your data, kept safe**
 - **On your device only**, with a backup reminder, full backups (.json), CSV export, and **automatic backups** to a folder (for example one synced by OneDrive or Google Drive).
-- **PIN lock with encryption:** an optional 4–6 digit PIN, with auto-lock. Saved data is then encrypted (AES-256-GCM, key from the PIN with PBKDF2); downloaded backups are not, so keep them somewhere private. Face ID or a fingerprint can unlock it where the device supports it.
+- **PIN lock with encryption:** an optional 4–6 digit PIN, with auto-lock. Saved data and the backups you download are then encrypted (AES-256-GCM, key from the PIN with 600,000 rounds of PBKDF2). A PIN keeps out someone who picks up your device; six digits are harder to guess than four. Face ID or a fingerprint can unlock it where the device supports it.
 - **Import from other apps:** a CSV from almost any weight app (it finds the columns, date order and unit itself) or an Apple Health export, with a preview before anything is saved.
 - **[Two devices](#using-tare-on-two-devices):** merge a backup from another device into this one.
 - **Undo** for deletes and merges, and several windows stay in sync.
@@ -160,7 +160,9 @@ Tare is a static site: `npm run build` produces `dist/`, which any static host c
 2. Build command `npm run build`, output directory `dist`, and the environment variable `NODE_VERSION` = `24` (on Cloudflare, framework preset **None**).
 3. Every merge into `main` updates the site, and every pull request gets its own preview address.
 
-Both read `public/_headers`, which sets security headers (no framing, no referrer, no camera or location access) and caching: built files are kept for a year, while the page and service worker are always checked for a new version. GitHub Pages doesn't read it. On every host, the build adds a content security policy to the page itself (`vite.config.ts`): it may load only its own files, and inline scripts are blocked.
+Both read `public/_headers`, which sets security headers (no framing, no referrer, no camera or location access) and caching: built files are kept for a year, while the page and service worker are always checked for a new version. GitHub Pages doesn't read it, so the page covers what it can itself, on every host: a content security policy added by the build (`vite.config.ts`) lets it load only its own files and blocks inline scripts, a referrer meta tag sends no referrer, and `public/theme.js` hides the app if another site puts it in a frame.
+
+On GitHub Pages, every project under `rihami.github.io` shares one browser origin, and so one storage area. Publish other projects there only if you trust them with Tare's saved data, or give Tare a domain of its own.
 
 ## Credits and licence
 

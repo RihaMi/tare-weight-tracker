@@ -24,7 +24,7 @@ Inspired by the iOS app *Monitor Your Weight*, rebuilt with a cleaner, modern de
 - **Year in review:** in the first two weeks of January, the year before: trend change, weigh-ins, best month, longest streak and milestones, with a picture of that year to share.
 
 **Plan ahead**
-- **Goal and steps:** a goal weight and date, with smaller steps on the way.
+- **Goal and steps:** a goal weight and date, with smaller steps on the way. Goals you replace are kept in History (**Your goals**), with how far each got or when it was reached.
 - **Re-plan when behind:** once you've fallen behind pace, Overview shows what keeping the date now takes (and whether that's healthy), and offers a realistic new date to move to in one tap.
 - **Calorie calculator:** resting and maintenance calories, a daily target for your pace (Mifflin–St Jeor, or Katch–McArdle when you know your body fat), suggested protein, fat and carbs, and a table of paces with the date each would reach your goal. It never suggests less than 1,200 kcal (women) or 1,500 kcal (men), and warns about losing more than 1 % of body weight a week.
 - **Health estimates:** BMI with its scale, a healthy weight range, ideal weight (Devine) and body fat from BMI or a tape measure (US Navy method).

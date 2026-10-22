@@ -25,7 +25,7 @@ describe('cycle', () => {
 
   it('is saved per profile, off unless turned on, and older data upgrades without it', () => {
     const base = { version: 6, profiles: [{ id: 'p', name: 'P', entries: [] }] };
-    expect(migrate(base).profiles[0]).toMatchObject({ cycleTracking: false, periodStarts: [] });
+    expect(migrate(base).profiles[0]).toMatchObject({ cycleTracking: false, periodStarts: [], pastGoals: [] });
     const kept = migrate({ ...base, version: 7, profiles: [{ id: 'p', name: 'P', entries: [], cycleTracking: true, periodStarts: ['2026-09-24', 'nope', '2026-08-27', '2026-09-24'] }] });
     expect(kept.profiles[0]).toMatchObject({ cycleTracking: true, periodStarts: ['2026-08-27', '2026-09-24'] });
   });

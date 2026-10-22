@@ -14,6 +14,7 @@ import { suggestSteps } from '../../lib/steps';
 import { nextExpected } from '../../lib/cycle';
 import { ACTIVITY } from '../../lib/calories';
 import { addDays, fmtDate, todayISO } from '../../lib/dates';
+import { retireGoal } from '../../lib/goals';
 import { CM_IN, deltaUnit, disp, fmtW, fromDisp, isMetric } from '../../lib/units';
 import { $, armOrRun, download, esc, pickFile, pickTextFile, toast } from '../dom';
 import { isIOSBrowserTab } from '../../lib/backupNudge';
@@ -137,7 +138,11 @@ function readProfileForm(p: Profile): void {
   p.frame = $<HTMLSelectElement>('#pFrame').value as Frame;
   p.activity = +$<HTMLSelectElement>('#pAct').value;
   const g = num('pGoal');
-  p.goalKg = g == null ? null : +fromDisp(g, u).toFixed(2);
+  const goalKg = g == null ? null : +fromDisp(g, u).toFixed(2);
+  // A new goal weight keeps the one it replaces in the goal history.
+  const past = retireGoal(p, goalKg, todayISO());
+  if (past) p.pastGoals = [...p.pastGoals, past];
+  p.goalKg = goalKg;
   p.goalDate = $<HTMLInputElement>('#pGoalDate').value || null;
   const cycle = document.querySelector<HTMLInputElement>('#pCycle');
   if (cycle) p.cycleTracking = cycle.checked;

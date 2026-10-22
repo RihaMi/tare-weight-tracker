@@ -5,7 +5,7 @@ import { fmtDate } from '../../lib/dates';
 import { fmtDelta, fmtW } from '../../lib/units';
 import { $, esc } from '../dom';
 import { t, type Key } from '../../i18n';
-import { milestonesCard, patternsCard, weeklyCard } from './insights';
+import { goalsCard, milestonesCard, patternsCard, weeklyCard } from './insights';
 import { eventsCard } from './events';
 
 let showAllWeeks = false;
@@ -31,7 +31,7 @@ export function historyView(): string {
     months[months.length - 1].items.push(x);
   }
 
-  const insights = weeklyCard(r, showAllWeeks) + '<div class="col">' + milestonesCard(profile(), r) + eventsCard(profile(), r) + patternsCard(r) + '</div>';
+  const insights = weeklyCard(r, showAllWeeks) + '<div class="col">' + milestonesCard(profile(), r) + goalsCard(profile(), r) + eventsCard(profile(), r) + patternsCard(r) + '</div>';
   const hasNotes = r.E.some(e => e.note);
   return `${insights ? `<div class="grid-2 even">${insights}</div>` : ''}<section class="card" id="allWeighIns">
     <div class="card-head"><h2>${t('history.title')}</h2>

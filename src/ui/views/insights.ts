@@ -2,7 +2,8 @@ import { unit } from '../../app';
 import type { Profile, Unit } from '../../data/schema';
 import { t, tn, type Key } from '../../i18n';
 import type { Stats } from '../../lib/calc';
-import { fmtDate, todayISO } from '../../lib/dates';
+import { daysBetween, fmtDate, todayISO } from '../../lib/dates';
+import { pastProgress } from '../../lib/goals';
 import { milestoneStepKg, milestones, plateau, streaks, weekdayPattern, weeklyAverages, weekStart, type Milestone, type NextMilestone } from '../../lib/insights';
 import { monthRecap, previousMonth } from '../../lib/recap';
 import { yearReview } from '../../lib/yearReview';
@@ -212,6 +213,22 @@ export function weeklyCard(r: Stats, showAll: boolean): string {
       }).join('')}</tbody></table></div>
     ${weeks.length > WEEKS_SHOWN ? `<div class="actions start"><button type="button" class="btn ghost small-btn" data-act="toggleWeeks">${showAll ? t('weekly.fewer') : t('weekly.all', { n: weeks.length })}</button></div>` : ''}
   </section>`;
+}
+
+/** Goals a new one replaced, newest first, under the one you have now. Nothing until a goal has been replaced. */
+export function goalsCard(p: Profile, r: Stats): string {
+  if (!p.pastGoals.length) return '';
+  const u = unit(), long = (d: string) => fmtDate(d, { day: 'numeric', month: 'short', year: 'numeric' });
+  const span = (from: string, to: string) => { const d = daysBetween(from, to); return d < 14 ? tn('week.days', Math.max(1, d)) : tn('week.weeks', Math.round(d / 7)); };
+  const range = (startKg: number, goalKg: number) => `${fmtW(startKg, u)} → ${fmtW(goalKg, u)}`;
+  const since = p.pastGoals.at(-1)!.to;
+  const startNow = r.E.find(e => e.date >= since)?.kg ?? p.pastGoals.at(-1)!.endKg;
+  const current = p.goalKg != null
+    ? `<li><span class="ms-dot progress"></span><span><b>${range(startNow, p.goalKg)}</b><small>${t('goals.current')}</small></span><span class="muted">${t('goals.since', { date: long(since) })}</span></li>` : '';
+  const past = [...p.pastGoals].reverse().map(g => `<li><span class="ms-dot ${g.reached ? 'goal' : 'step'}"></span><span><b>${range(g.startKg, g.goalKg)}</b><small>${g.reached
+    ? t('goals.reached', { time: span(g.from, g.reached) })
+    : t('goals.partway', { pct: Math.round(pastProgress(g) * 100) })}</small></span><span class="muted">${long(g.from)} – ${long(g.to)}</span></li>`).join('');
+  return `<section class="card" id="goalsCard"><div class="card-head"><h2>${t('goals.title')}</h2></div><ul class="ms-list goals-list">${current}${past}</ul></section>`;
 }
 
 export function milestonesCard(p: Profile, r: Stats): string {

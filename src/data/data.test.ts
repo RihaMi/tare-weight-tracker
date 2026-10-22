@@ -138,3 +138,12 @@ describe('units per profile', () => {
     expect(now.profiles.map(p => p.unit)).toEqual(['lb', 'kg']);
   });
 });
+
+describe('goal history', () => {
+  it('starts empty for older data, keeps valid past goals and drops broken ones', () => {
+    expect(migrate({ version: 8, unit: 'kg', profiles: [{ id: 'a', name: 'A', entries: [] }] }).profiles[0].pastGoals).toEqual([]);
+    const goal = { id: 'g1', from: '2026-01-05', to: '2026-04-02', startKg: 92.4, goalKg: 85, endKg: 84.6, reached: '2026-03-03' };
+    const data = migrate({ version: 9, unit: 'kg', profiles: [{ id: 'a', name: 'A', entries: [], pastGoals: [goal, { ...goal, id: 'bad', goalKg: 'x' }, { ...goal, id: 'no-date', to: 'soon' }] }] });
+    expect(data.profiles[0].pastGoals).toEqual([goal]);
+  });
+});

@@ -1,4 +1,4 @@
-import { daysBetween, isISODate } from '../lib/dates';
+import { daysBetween, isISODate, todayISO } from '../lib/dates';
 import { LB } from '../lib/units';
 import { startsFromFlowDays } from '../lib/cycle';
 import { parseCSVRows } from './backup';
@@ -46,11 +46,16 @@ export function guessUnit(p: ImportPreview): WeightUnit {
 
 const rowKg = (r: ImportRow, unit: WeightUnit): number => r.value * TO_KG[r.unit ?? unit];
 
-/** The rows as Tare entries, reading unlabelled weights in `unit`. Rows outside 20–400 kg are left out. */
-export function toEntries(p: ImportPreview, unit: WeightUnit, now = Date.now()): { entries: Entry[]; outOfRange: number } {
+/**
+ * The rows as Tare entries, reading unlabelled weights in `unit`. Rows outside 20–400 kg are
+ * left out, and so are rows dated after today (a typo'd year, or dates read the wrong way round).
+ */
+export function toEntries(p: ImportPreview, unit: WeightUnit, now = Date.now()): { entries: Entry[]; outOfRange: number; future: number } {
   const entries: Entry[] = [];
-  let outOfRange = 0;
+  const today = todayISO(new Date(now));
+  let outOfRange = 0, future = 0;
   for (const r of p.rows) {
+    if (r.date > today) { future++; continue; }
     const kg = rowKg(r, unit);
     if (!(kg >= MIN_KG && kg <= MAX_KG)) { outOfRange++; continue; }
     const e: Entry = { id: newId('e_'), date: r.date, kg: Math.round(kg * 100) / 100, updatedAt: now };
@@ -61,7 +66,7 @@ export function toEntries(p: ImportPreview, unit: WeightUnit, now = Date.now()):
     if (c) e.composition = c;
     entries.push(e);
   }
-  return { entries, outOfRange };
+  return { entries, outOfRange, future };
 }
 
 /** One row per date: the earliest weigh-in of each day (by time, else by order in the file). */

@@ -1,5 +1,5 @@
 import { app, commit, go, profile, unit } from '../../app';
-import { mergeEntries, readBackupFile, restoredData, toBackupJSON, toCSV } from '../../data/backup';
+import { backupKey, mergeEntries, readBackupFile, restoredData, toBackupJSON, toCSV } from '../../data/backup';
 import { isEnvelope, keyInfoFor, seal, unseal, type Envelope } from '../../lib/crypto';
 import { migrate } from '../../data/schema';
 import { formatLocale } from '../../lib/format';
@@ -7,7 +7,7 @@ import { autoBackupState, backUpNow, chooseBackupFolder, resumeAutoBackup, stopA
 import type { ImportPreview, WeightUnit } from '../../data/importers';
 import { DataError, blankProfile, newId, type AppData, type Frame, type Profile } from '../../data/schema';
 import { t, tn, type Key } from '../../i18n';
-import { calc } from '../../lib/calc';
+import { calc, sortedEntries } from '../../lib/calc';
 import { suggestGoal } from '../../lib/health';
 import { orderedSteps } from '../../lib/insights';
 import { suggestSteps } from '../../lib/steps';
@@ -117,7 +117,7 @@ function stepRow(kg: number | null, date: string | null): string {
 
 /** Weights to reach on the way to the goal, edited with the rest of the form and saved with it. */
 function stepsEditor(p: Profile): string {
-  const shown = p.entries.length ? orderedSteps(p.goalSteps, [...p.entries].sort((a, b) => (a.date < b.date ? -1 : 1))[0].kg, p.goalKg) : p.goalSteps;
+  const shown = p.entries.length ? orderedSteps(p.goalSteps, sortedEntries(p)[0].kg, p.goalKg) : p.goalSteps;
   const extra = p.goalSteps.filter(s => !shown.includes(s)); // not on the way to the current goal: still shown, so they can be fixed or removed
   return `<div class="steps-edit">
     <h3 class="sub-h">${t('steps.title')}</h3>
@@ -156,6 +156,23 @@ function readProfileForm(p: Profile): void {
   p.updatedAt = Date.now();
 }
 
+/**
+ * Undo for a restore or a merge: puts back the data from before, unless it changed since (a new
+ * weigh-in, or another window saving). Then a snapshot would lose that change, so it says it can't.
+ * An automatic backup in between only changes bookkeeping, which backupKey leaves out.
+ */
+function undoTo(before: AppData, after: AppData): () => boolean {
+  const afterKey = backupKey(after);
+  return () => {
+    if (backupKey(app.data) !== afterKey) return false;
+    app.data = before;
+    resetCalories();
+    app.applyLanguage();
+    applyTheme(app.data.settings.theme);
+    return true;
+  };
+}
+
 function showRestoreConfirm(): void {
   const box = $('#restoreConfirm');
   if (!pendingRestore) { box.hidden = true; return; }
@@ -172,17 +189,14 @@ function showRestoreConfirm(): void {
     if (!changedAnything(counts)) { showRestoreConfirm(); toast(t('backup.nothingNew')); return; }
     app.data = data;
     resetCalories();
-    commitWithUndo(t('backup.merged', { added: counts.profiles + counts.entries + counts.events, updated: counts.updated }) + (counts.removed ? t('backup.mergedRemoved', { n: counts.removed }) : ''), () => {
-      app.data = before;
-      resetCalories();
-      return true;
-    });
+    commitWithUndo(t('backup.merged', { added: counts.profiles + counts.entries + counts.events, updated: counts.updated }) + (counts.removed ? t('backup.mergedRemoved', { n: counts.removed }) : ''), undoTo(before, data));
   });
   $('#restoreGo').addEventListener('click', () => {
+    const before = structuredClone(app.data);
     app.data = restoredData(pending.data, app.data); pendingRestore = null; resetCalories();
     app.applyLanguage();
     applyTheme(app.data.settings.theme);
-    commit(t('backup.restored'));
+    commitWithUndo(t('backup.restored'), undoTo(before, app.data));
   });
   $('#restoreCancel').addEventListener('click', () => { pendingRestore = null; showRestoreConfirm(); });
 }
@@ -198,7 +212,7 @@ function showImportConfirm(reading?: string): void {
   if (!pendingImport) { box.hidden = true; box.innerHTML = ''; return; }
   const { name, preview: pv, unit: fileUnit } = pendingImport;
   const u = unit(), p = profile();
-  const { entries, outOfRange } = importers!.toEntries(pv, fileUnit);
+  const { entries, outOfRange, future } = importers!.toEntries(pv, fileUnit);
   const kgs = entries.map(e => e.kg);
   const have = new Set(p.sample ? [] : p.entries.map(e => e.date));
   const replaces = entries.filter(e => have.has(e.date)).length;
@@ -214,6 +228,7 @@ function showImportConfirm(reading?: string): void {
     ${pv.sameDay ? `<p class="note flush">${tn('import.sameDay', pv.sameDay)}</p>` : ''}
     ${pv.skipped ? `<p class="note flush">${tn('import.skipped', pv.skipped)}</p>` : ''}
     ${outOfRange ? `<p class="note flush">${tn('import.outOfRange', outOfRange)}</p>` : ''}
+    ${future ? `<p class="note flush">${tn('import.future', future)}</p>` : ''}
     ${pv.periodStarts?.length ? `<p class="note flush">${tn('import.periods', pv.periodStarts.length)}</p>` : ''}
     ${p.sample && entries.length ? `<p class="note flush">${t('import.newProfile')}</p>` : ''}
     <div class="actions start">${entries.length ? `<button type="button" class="btn primary btn-wrap" id="importGo">${tn('import.go', entries.length)}</button>` : ''}<button type="button" class="btn" id="importCancel">${t('common.cancel')}</button></div>
@@ -234,7 +249,7 @@ function showImportConfirm(reading?: string): void {
     }
     const { added, replaced } = mergeEntries(target, entries);
     if (pv.periodStarts?.length) target.periodStarts = [...new Set([...target.periodStarts, ...pv.periodStarts])].sort();
-    const left = pv.skipped + outOfRange;
+    const left = pv.skipped + outOfRange + future;
     pendingImport = null;
     commit(t('backup.imported', { n: added }) + (replaced ? t('backup.importedUpdated', { n: replaced }) : '') + (left ? t('backup.importedSkipped', { n: left }) : ''));
   });
@@ -341,7 +356,7 @@ export function bindProfile(): void {
   $('#suggestStepsBtn').addEventListener('click', () => {
     const note = $('#stepsNote');
     const g = parseFloat($<HTMLInputElement>('#pGoal').value);
-    const start = [...p.entries].sort((a, b) => (a.date < b.date ? -1 : 1))[0]?.kg;
+    const start = sortedEntries(p)[0]?.kg;
     if (!isFinite(g) || start == null) { note.hidden = false; note.textContent = t('steps.suggestNeed'); return; }
     const kgs = suggestSteps(start, fromDisp(g, unit()), unit());
     $('#stepRows').innerHTML = kgs.map(kg => stepRow(kg, null)).join('');

@@ -62,8 +62,9 @@ const defaultVerify = async (pin: string): Promise<boolean> => {
   return !!stored && verifyPin(pin, stored);
 };
 
-async function check(): Promise<boolean> {
-  if (busy) return false;
+/** True or false once the PIN was checked; null when another check was still running, so nothing was. */
+async function check(): Promise<boolean | null> {
+  if (busy) return null;
   busy = true;
   $('.lock-box').classList.add('busy');
   const ok = await (options.verify ?? defaultVerify)(entered).catch(() => false);
@@ -94,7 +95,7 @@ async function unlockWithPasskey(): Promise<void> {
   try { pin = await pinFromPasskey(); } catch { message(t('lock.passkeyFailed'), true); return; }
   entered = pin;
   drawDots();
-  if (!(await check())) {
+  if ((await check()) === false) {
     // The PIN was changed somewhere else since; this passkey no longer fits.
     forgetPasskey();
     $('#passkeyUnlock').hidden = true;

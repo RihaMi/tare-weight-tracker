@@ -194,7 +194,8 @@ async function unlockLoaded(pin: string): Promise<boolean> {
 
 let hiddenAt = 0;
 function lockNow(env?: Envelope): void {
-  $<HTMLDialogElement>('#entryDlg').close();
+  // Every open dialog closes: one left open would sit above the lock screen (dialogs are drawn on top of everything).
+  document.querySelectorAll<HTMLDialogElement>('dialog[open]').forEach(d => d.close());
   $('#view').innerHTML = '';
   $('#profileSel').innerHTML = '';
   const then = () => { render(); maybeQuickLog(); };
@@ -336,8 +337,14 @@ function bindGlobalEvents(): void {
     const h = location.hash.slice(1);
     if (isTab(h) && h !== app.tab) { app.tab = h; render(); window.scrollTo(0, 0); }
   });
-  let resizeTimer: number | undefined;
-  new ResizeObserver(() => { clearTimeout(resizeTimer); resizeTimer = window.setTimeout(drawOverviewChart, 60); }).observe($('#view'));
+  // Redraw the chart when the view gets wider or narrower; its height changes with every render and doesn't matter.
+  let resizeTimer: number | undefined, lastWidth = 0;
+  new ResizeObserver(([e]) => {
+    if (e.contentRect.width === lastWidth) return;
+    lastWidth = e.contentRect.width;
+    clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(drawOverviewChart, 60);
+  }).observe($('#view'));
 }
 
 function setupInstall(): void {

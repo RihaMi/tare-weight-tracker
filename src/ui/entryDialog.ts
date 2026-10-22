@@ -97,6 +97,12 @@ function submit(ev: SubmitEvent): void {
     err.textContent = t('entry.invalid', { min: fmtW(20, u), max: fmtW(400, u) });
     return;
   }
+  // The date field's max isn't enforced by a novalidate form, and a date can be typed past it.
+  if (date > todayISO()) {
+    err.hidden = false;
+    err.textContent = t('entry.future');
+    return;
+  }
   err.hidden = true;
   const unlikely = unlikelyWeight(profile().entries.filter(x => x.date !== editing), date, kg);
   if (unlikely && askedKg !== kg) {

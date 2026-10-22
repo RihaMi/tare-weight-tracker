@@ -16,8 +16,19 @@ permissions:
   contents: read
 
 jobs:
-  # One job per test project, side by side: each runs about a third of the tests and
-  # installs only the browser it needs.
+  # The Playwright version in the lockfile, so the WebKit job's image always matches it
+  # (Dependabot updates the lockfile; the image follows).
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      playwright: ${{ steps.v.outputs.playwright }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: v
+        run: echo "playwright=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")" >> "$GITHUB_OUTPUT"
+
+  # Desktop and phone (Chromium), side by side, on the runner itself. The screenshot
+  # references are made the same way, so they keep matching.
   tests:
     name: tests (${{ matrix.project }})
     runs-on: ubuntu-latest
@@ -29,7 +40,6 @@ jobs:
         include:
           - { project: desktop, browser: chromium }
           - { project: phone, browser: chromium }
-          - { project: iphone, browser: webkit }
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -58,13 +68,38 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
+  # iPhone (WebKit) in Playwright's own image, which already has WebKit and its system
+  # packages: installing those from Ubuntu's mirror sometimes took over 20 minutes.
+  tests-iphone:
+    name: tests (iphone)
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v${{ needs.version.outputs.playwright }}-noble
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright test --project=iphone
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report-iphone
+          path: playwright-report/
+          retention-days: 14
+
   # The check that branch protection asks for: passes only when every project's tests passed.
   playwright:
-    needs: tests
+    needs: [tests, tests-iphone]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - run: test "${{ needs.tests.result }}" = success
+      - run: test "${{ needs.tests.result }}" = success && test "${{ needs.tests-iphone.result }}" = success
 
   lighthouse:
     runs-on: ubuntu-latest

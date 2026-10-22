@@ -16,9 +16,20 @@ permissions:
   contents: read
 
 jobs:
-  playwright:
+  # One job per test project, side by side: each runs about a third of the tests and
+  # installs only the browser it needs.
+  tests:
+    name: tests (${{ matrix.project }})
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Normally 3–4 minutes; room for a slow package mirror when installing the browser.
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { project: desktop, browser: chromium }
+          - { project: phone, browser: chromium }
+          - { project: iphone, browser: webkit }
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -26,15 +37,34 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium webkit
+      # The downloaded browser is cached per Playwright version; its system packages are installed every time.
+      - id: pw
+        run: echo "version=$(node -p "require('./node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - id: browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      - if: steps.browsers.outputs.cache-hit == 'true'
+        run: npx playwright install-deps ${{ matrix.browser }}
       - run: npm run build
-      - run: npm run e2e
+      - run: npx playwright test --project=${{ matrix.project }}
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.project }}
           path: playwright-report/
           retention-days: 14
+
+  # The check that branch protection asks for: passes only when every project's tests passed.
+  playwright:
+    needs: tests
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.tests.result }}" = success
 
   lighthouse:
     runs-on: ubuntu-latest

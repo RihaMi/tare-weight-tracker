@@ -54,6 +54,10 @@ test('backs up to the chosen folder, again after a change, keeping the last 7 da
   await page.locator('#eW').fill('86.6');
   await page.locator('#eNote').fill('after the backup');
   await page.locator('#entryForm button[type=submit]').click();
+  await expect(page.locator('#entryDlg')).toBeHidden();
+  // The backup waits 4 s for changes to settle; move the test clock past that rather than
+  // racing a real timer on a busy machine.
+  await page.clock.runFor(5000);
   await expect.poll(async () => (await files(page))[today], { timeout: 15_000 }).toContain('after the backup');
   // It also counts as a backup for the reminder.
   await expect(page.locator('#view')).toContainText('Last backup:');

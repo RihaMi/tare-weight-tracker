@@ -1,4 +1,4 @@
-import { test as base } from '@playwright/test';
+import { expect, test as base } from '@playwright/test';
 
 // Shared setup for the browser tests. A real first visit opens the short setup;
 // most tests are about the app itself, so they start as if the setup had been
@@ -41,4 +41,23 @@ export async function createProfile(page: import('@playwright/test').Page, name:
   await dlg.locator('#suSkip').click();               // Weight and goal
   await dlg.locator('button[type=submit]').click();   // Start fresh
   await page.locator('#setupDlg').waitFor({ state: 'hidden' });
+}
+
+/**
+ * Waits until the saved data is the encrypted copy. Setting a PIN updates the screen first and
+ * saves just after (deriving the key is slow on purpose), so reloading straight away could read
+ * the copy from before the PIN.
+ */
+export async function encryptedSaved(page: import('@playwright/test').Page): Promise<void> {
+  const tare = () => page.evaluate(() => new Promise<string | undefined>((resolve, reject) => {
+    const rq = indexedDB.open('tare', 1);
+    rq.onerror = () => reject(rq.error);
+    rq.onsuccess = () => {
+      const get = rq.result.transaction('app', 'readonly').objectStore('app').get('state');
+      get.onsuccess = () => { resolve(get.result?.tare); rq.result.close(); };
+      get.onerror = () => reject(get.error);
+    };
+  }));
+  await expect(page.locator('[data-pin=remove]')).toBeVisible({ timeout: 30_000 });
+  await expect.poll(tare, { timeout: 30_000 }).toBe('encrypted');
 }

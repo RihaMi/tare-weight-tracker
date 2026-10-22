@@ -8,10 +8,10 @@ const entries = (n: number, loggedDaysAgo: number): Entry[] =>
   Array.from({ length: n }, (_, i) => ({ id: `e${i}`, date: `2026-09-${String(i + 1).padStart(2, '0')}`, kg: 80, updatedAt: NOW - loggedDaysAgo * DAY }));
 const profile = (e: Entry[], sample = false): Profile => ({
   id: sample ? 'sample' : 'p', name: 'P', unit: 'kg', sex: 'm', birthYear: null, heightCm: null, frame: 'medium', activity: 1.375,
-  goalKg: null, goalDate: null, entries: e, events: [], goalSteps: [], cycleTracking: false, periodStarts: [], pastGoals: [], updatedAt: 0, ...(sample ? { sample: true } : {}),
+  goalKg: null, goalDate: null, entries: e, events: [], goalSteps: [], cycleTracking: false, periodStarts: [], pastGoals: [], deleted: [], updatedAt: 0, ...(sample ? { sample: true } : {}),
 });
 const data = (profiles: Profile[], s: Partial<AppData['settings']> = {}): AppData =>
-  ({ version: 9, unit: 'kg', activeId: profiles[0].id, profiles, settings: { ...defaultSettings(), ...s } });
+  ({ version: 10, unit: 'kg', activeId: profiles[0].id, profiles, deletedProfiles: [], settings: { ...defaultSettings(), ...s } });
 
 describe('backup reminder', () => {
   it('waits for real data: none for the example profile or a handful of entries', () => {

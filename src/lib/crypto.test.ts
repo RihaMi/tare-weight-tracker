@@ -6,8 +6,8 @@ import { isEnvelope, keyInfoFor, newKeyInfo, seal, unseal } from './crypto';
 const ROUNDS = 1000; // fast for tests; the app uses 150 000
 
 const data = (): AppData => ({
-  version: 9, unit: 'kg', activeId: 'p',
-  profiles: [{ id: 'p', name: 'Secret Name', unit: 'kg', sex: 'f', birthYear: 1990, heightCm: 165, frame: 'medium', activity: 1.375, goalKg: 60, goalDate: null, updatedAt: 0, events: [], goalSteps: [], cycleTracking: false, periodStarts: [], pastGoals: [],
+  version: 10, unit: 'kg', activeId: 'p', deletedProfiles: [],
+  profiles: [{ id: 'p', name: 'Secret Name', unit: 'kg', sex: 'f', birthYear: 1990, heightCm: 165, frame: 'medium', activity: 1.375, goalKg: 60, goalDate: null, updatedAt: 0, events: [], goalSteps: [], cycleTracking: false, periodStarts: [], pastGoals: [], deleted: [],
     entries: [{ id: 'e1', date: '2026-10-19', kg: 63.4, note: 'private note', updatedAt: 0 }] }],
   settings: defaultSettings(),
 });

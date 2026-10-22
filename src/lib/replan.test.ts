@@ -17,7 +17,7 @@ function daily(startKg: number, perWeek: number, days: number, end = TODAY): Ent
 function profile(entries: Entry[], goalDate: string, goalKg = 80): Profile {
   return {
     id: 'p', name: 'Test', unit: 'kg', sex: 'm', birthYear: 1988, heightCm: 180, frame: 'medium', activity: 1.375,
-    goalKg, goalDate, updatedAt: 0, events: [], goalSteps: [], cycleTracking: false, periodStarts: [], pastGoals: [], entries,
+    goalKg, goalDate, updatedAt: 0, events: [], goalSteps: [], cycleTracking: false, periodStarts: [], pastGoals: [], deleted: [], entries,
   };
 }
 const plan = (p: Profile) => replan(p.goalKg ?? undefined, p.goalDate ?? undefined, calc(p, new Date(TODAY + 'T12:00:00Z')), TODAY);

@@ -15,6 +15,7 @@ import { nextExpected } from '../../lib/cycle';
 import { ACTIVITY } from '../../lib/calories';
 import { addDays, fmtDate, todayISO } from '../../lib/dates';
 import { retireGoal } from '../../lib/goals';
+import { profileDeleted, profileRestored } from '../../lib/deletions';
 import { CM_IN, deltaUnit, disp, fmtW, fromDisp, isMetric } from '../../lib/units';
 import { $, armOrRun, download, esc, pickFile, pickTextFile, toast } from '../dom';
 import { isIOSBrowserTab } from '../../lib/backupNudge';
@@ -171,7 +172,7 @@ function showRestoreConfirm(): void {
     if (!changedAnything(counts)) { showRestoreConfirm(); toast(t('backup.nothingNew')); return; }
     app.data = data;
     resetCalories();
-    commitWithUndo(t('backup.merged', { added: counts.profiles + counts.entries + counts.events, updated: counts.updated }), () => {
+    commitWithUndo(t('backup.merged', { added: counts.profiles + counts.entries + counts.events, updated: counts.updated }) + (counts.removed ? t('backup.mergedRemoved', { n: counts.removed }) : ''), () => {
       app.data = before;
       resetCalories();
       return true;
@@ -348,6 +349,7 @@ export function bindProfile(): void {
     armOrRun(ev.currentTarget as HTMLButtonElement, t('profile.deleteConfirm', { name: p.name }), () => {
       const at = app.data.profiles.indexOf(p);
       app.data.profiles = app.data.profiles.filter(x => x.id !== p.id);
+      profileDeleted(app.data, p.id);
       // Deleting the last profile leaves an empty one in its place; Undo takes that away again if it's still empty.
       const filler = app.data.profiles.length ? null : blankProfile(t('profile.defaultName'), app.data.unit);
       if (filler) app.data.profiles.push(filler);
@@ -357,6 +359,7 @@ export function bindProfile(): void {
         if (app.data.profiles.some(x => x.id === p.id)) return false;
         if (filler) app.data.profiles = app.data.profiles.filter(x => x.id !== filler.id || x.entries.length);
         app.data.profiles.splice(Math.min(at, app.data.profiles.length), 0, p);
+        profileRestored(app.data, p.id);
         app.data.activeId = p.id;
         resetCalories();
         return true;

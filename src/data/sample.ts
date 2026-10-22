@@ -68,5 +68,6 @@ export function sampleProfile(today = todayISO(), text: SampleText = ENGLISH): P
     cycleTracking: false,
     periodStarts: [],
     pastGoals: [],
+    deleted: [],
   };
 }

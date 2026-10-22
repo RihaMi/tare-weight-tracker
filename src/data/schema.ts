@@ -9,7 +9,8 @@ import { isISODate } from '../lib/dates';
 // v7: cycle tracking and period start days on each profile.
 // v8: a unit (kg / lb / st) on each profile; AppData.unit is now the one new profiles start with.
 // v9: past goals on each profile, kept when a new goal weight replaces one.
-export const SCHEMA_VERSION = 9;
+// v10: deleted weigh-ins, events and profiles are remembered, so merging a backup keeps them deleted.
+export const SCHEMA_VERSION = 10;
 
 export type Unit = 'kg' | 'lb' | 'st';
 export type Sex = 'f' | 'm';
@@ -62,6 +63,15 @@ export interface PastGoal {
   reached: string | null; // YYYY-MM-DD: the first weigh-in at or past the goal, if any
 }
 
+/** A weigh-in (by its date) or event (by its id) that was deleted, and when. Merging keeps it deleted. */
+export type Deletion = { kind: 'entry'; date: string; at: number } | { kind: 'event'; id: string; at: number };
+
+/** A profile that was deleted, and when. */
+export interface ProfileDeletion { id: string; at: number }
+
+/** At most this many deletions are remembered per profile (and profiles per device); older ones are forgotten. */
+export const MAX_DELETIONS = 500;
+
 /** A weight to reach on the way to the goal, optionally by a date. */
 export interface GoalStep { id: string; kg: number; date: string | null }
 
@@ -82,6 +92,7 @@ export interface Profile {
   cycleTracking: boolean; // off by default; see src/lib/cycle.ts
   periodStarts: string[]; // YYYY-MM-DD, oldest first
   pastGoals: PastGoal[];  // oldest first
+  deleted: Deletion[];    // oldest first
   sample?: boolean;
   updatedAt: number;
 }
@@ -115,6 +126,7 @@ export interface AppData {
   unit: Unit;
   activeId: string;
   profiles: Profile[];
+  deletedProfiles: ProfileDeletion[]; // oldest first
   settings: Settings;
 }
 
@@ -124,7 +136,7 @@ export const newId = (prefix = ''): string =>
 export function blankProfile(name = 'Me', unit: Unit = 'kg'): Profile {
   return {
     id: newId('p_'), name, unit, sex: 'f', birthYear: null, heightCm: null, frame: 'medium', activity: 1.375,
-    goalKg: null, goalDate: null, entries: [], events: [], goalSteps: [], cycleTracking: false, periodStarts: [], pastGoals: [], updatedAt: Date.now(),
+    goalKg: null, goalDate: null, entries: [], events: [], goalSteps: [], cycleTracking: false, periodStarts: [], pastGoals: [], deleted: [], updatedAt: Date.now(),
   };
 }
 
@@ -200,6 +212,21 @@ function cleanPastGoal(v: unknown): PastGoal | null {
   return { id: typeof o.id === 'string' && o.id ? o.id : newId('g_'), from: o.from, to: o.to, startKg, goalKg, endKg, reached: isISODate(o.reached) ? o.reached : null };
 }
 
+function cleanDeletion(v: unknown): Deletion | null {
+  const o = obj(v);
+  const at = o ? num(o.at) : null;
+  if (!o || at == null) return null;
+  if (o.kind === 'entry' && isISODate(o.date)) return { kind: 'entry', date: o.date, at };
+  if (o.kind === 'event' && typeof o.id === 'string' && o.id) return { kind: 'event', id: o.id, at };
+  return null;
+}
+
+function cleanProfileDeletion(v: unknown): ProfileDeletion | null {
+  const o = obj(v);
+  const at = o ? num(o.at) : null;
+  return o && at != null && typeof o.id === 'string' && o.id ? { id: o.id, at } : null;
+}
+
 const asUnit = (v: unknown, fallback: Unit): Unit => (v === 'kg' || v === 'lb' || v === 'st' ? v : fallback);
 
 function cleanProfile(v: unknown, now: number, appUnit: Unit): Profile | null {
@@ -233,6 +260,9 @@ function cleanProfile(v: unknown, now: number, appUnit: Unit): Profile | null {
     // Before v9 replaced goals weren't kept.
     pastGoals: (Array.isArray(o.pastGoals) ? o.pastGoals : []).map(cleanPastGoal).filter((g): g is PastGoal => !!g)
       .sort((a, b) => (a.to < b.to ? -1 : 1)).slice(-50),
+    // Before v10 deletes weren't remembered.
+    deleted: (Array.isArray(o.deleted) ? o.deleted : []).map(cleanDeletion).filter((d): d is Deletion => !!d)
+      .sort((a, b) => a.at - b.at).slice(-MAX_DELETIONS),
     updatedAt: num(o.updatedAt) ?? now,
   };
   if (o.sample === true) p.sample = true;
@@ -276,9 +306,11 @@ export function migrate(raw: unknown, now = Date.now()): AppData {
   const profiles = o.profiles.map(p => cleanProfile(p, now, unit)).filter((p): p is Profile => !!p);
   if (!profiles.length) throw new DataError('noProfiles', 'This backup has no profiles in it.');
   const activeId = profiles.some(p => p.id === o.activeId) ? (o.activeId as string) : profiles[0].id;
-  return { version: SCHEMA_VERSION, unit, activeId, profiles, settings: cleanSettings(o.settings) };
+  const deletedProfiles = (Array.isArray(o.deletedProfiles) ? o.deletedProfiles : []).map(cleanProfileDeletion)
+    .filter((d): d is ProfileDeletion => !!d).sort((a, b) => a.at - b.at).slice(-MAX_DELETIONS);
+  return { version: SCHEMA_VERSION, unit, activeId, profiles, deletedProfiles, settings: cleanSettings(o.settings) };
 }
 
 export const freshData = (profiles: Profile[]): AppData => ({
-  version: SCHEMA_VERSION, unit: 'kg', activeId: profiles[0].id, profiles, settings: defaultSettings(),
+  version: SCHEMA_VERSION, unit: 'kg', activeId: profiles[0].id, profiles, deletedProfiles: [], settings: defaultSettings(),
 });

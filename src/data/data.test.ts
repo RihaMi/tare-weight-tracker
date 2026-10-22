@@ -147,3 +147,17 @@ describe('goal history', () => {
     expect(data.profiles[0].pastGoals).toEqual([goal]);
   });
 });
+
+describe('remembered deletes', () => {
+  it('start empty for older data, and keep only valid ones', () => {
+    const old = migrate({ version: 9, unit: 'kg', profiles: [{ id: 'a', name: 'A', entries: [] }] });
+    expect(old.profiles[0].deleted).toEqual([]);
+    expect(old.deletedProfiles).toEqual([]);
+    const now = migrate({
+      version: 10, unit: 'kg', deletedProfiles: [{ id: 'p1', at: 5 }, { id: '', at: 1 }],
+      profiles: [{ id: 'a', name: 'A', entries: [], deleted: [{ kind: 'entry', date: '2026-10-02', at: 7 }, { kind: 'event', id: 'x', at: 3 }, { kind: 'entry', date: 'soon', at: 1 }, { kind: 'other', at: 2 }] }],
+    });
+    expect(now.profiles[0].deleted).toEqual([{ kind: 'event', id: 'x', at: 3 }, { kind: 'entry', date: '2026-10-02', at: 7 }]);
+    expect(now.deletedProfiles).toEqual([{ id: 'p1', at: 5 }]);
+  });
+});

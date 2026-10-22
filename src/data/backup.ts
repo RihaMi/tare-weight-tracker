@@ -20,7 +20,10 @@ export function parseBackup(text: string): AppData {
 }
 
 const csvField = (v: string | number | undefined): string => {
-  const s = v == null ? '' : String(v);
+  let s = v == null ? '' : String(v);
+  // Text starting like a formula (a note such as "=HYPERLINK(…)") would run in a spreadsheet;
+  // a leading apostrophe keeps it text. Numbers, negative ones too, are left as they are.
+  if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s) && !/^-?\d/.test(s)) s = "'" + s;
   return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 };
 

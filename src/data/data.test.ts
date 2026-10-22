@@ -138,3 +138,19 @@ describe('units per profile', () => {
     expect(now.profiles.map(p => p.unit)).toEqual(['lb', 'kg']);
   });
 });
+
+describe('CSV export and spreadsheet formulas', () => {
+  it('keeps notes that look like formulas as text, and leaves numbers alone', () => {
+    const p = sampleProfile('2026-10-20');
+    p.entries = [
+      { id: 'a', date: '2026-10-19', kg: 80, note: '=HYPERLINK("https://example.com","x")', updatedAt: 0 },
+      { id: 'b', date: '2026-10-20', kg: 79.8, note: '-tired today', updatedAt: 0 },
+      { id: 'c', date: '2026-10-21', kg: 79.6, note: '+1 kg after pizza', updatedAt: 0 },
+    ];
+    const lines = toCSV(p).trim().split('\n').slice(1);
+    expect(lines[0]).toContain(`"'=HYPERLINK(""https://example.com"",""x"")"`);
+    expect(lines[1]).toContain(",'-tired today");
+    expect(lines[2]).toContain(",'+1 kg after pizza");
+    expect(lines[0].startsWith('2026-10-19,80,')).toBe(true);
+  });
+});

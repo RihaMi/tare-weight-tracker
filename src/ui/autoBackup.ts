@@ -127,11 +127,14 @@ async function write(force: boolean): Promise<void> {
   const saved = await load();
   if (!saved) return;
   if ((await saved.handle.queryPermission({ mode: 'readwrite' })) !== 'granted') { set({ kind: 'paused', folder: saved.handle.name }); return; }
+  // With a PIN but no key yet (still locked, or locked by another window changing the PIN), wait:
+  // writing now would put the data in the folder unencrypted.
+  if (app.data.settings.pin && !app.key) return;
   const key = backupKey(app.data);
   if (!force && key === saved.lastKey) return;
   // With a PIN, the file is encrypted like the saved data; restoring it asks for the PIN.
   const json = toBackupJSON(app.data);
-  const content = app.data.settings.pin && app.key ? JSON.stringify(await seal(JSON.parse(json), app.key)) : json;
+  const content = app.data.settings.pin ? JSON.stringify(await seal(JSON.parse(json), app.key!)) : json;
   const file = await saved.handle.getFileHandle(`tare-backup-${todayISO()}.json`, { create: true });
   const w = await file.createWritable();
   await w.write(content);

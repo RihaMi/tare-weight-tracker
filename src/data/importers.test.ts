@@ -179,3 +179,12 @@ async function zip(files: Array<[string, string, 0 | 8]>): Promise<Uint8Array<Ar
   let o = 0; for (const p of all) { out.set(p, o); o += p.length; }
   return out;
 }
+
+describe('dates after today', () => {
+  it('are left out of an import and counted', () => {
+    const p = parseAnyCSV('date,weight_kg\n2026-10-19,80.4\n2026-10-20,80.2\n2027-10-21,80.0\n');
+    const { entries, future } = toEntries(p, 'kg', Date.UTC(2026, 9, 20, 12));
+    expect(entries.map(e => e.date)).toEqual(['2026-10-19', '2026-10-20']);
+    expect(future).toBe(1);
+  });
+});
